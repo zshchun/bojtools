@@ -1,0 +1,14 @@
+cache_dir = "~/boj/cache"
+open_in_browser = true
+browser = "google-chrome"
+pager = "less"
+bojautologin = ""
+solved_token = ""
+
+[[lang]]
+cmd = "gcc -O2"
+ext = "cpp"
+
+[[lang]]
+cmd = "python3"
+ext = "py"
