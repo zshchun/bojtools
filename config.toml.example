@@ -1,4 +1,6 @@
 cache_dir = "~/boj/cache"
+code_dir = "~/boj/code"
+template = "~/.boj/template.cpp"
 open_in_browser = true
 browser = "google-chrome"
 pager = "less"
