@@ -35,6 +35,13 @@ def save_solved_list(tr):
         cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level, solved) VALUES (?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level'], False))
     config.db.commit()
 
+def get_cached_solved(pid):
+    cur = config.db.cursor()
+    q = cur.execute(f'''SELECT pid, title, solved_count, avg_try, level, solved FROM solved WHERE pid={pid}''').fetchone()
+    if not q: return {}
+    info = {'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4], 'solved':q[5]}
+    return info
+
 async def async_pick_random(level):
     if not level in levels: return
     await _http.open_solved()

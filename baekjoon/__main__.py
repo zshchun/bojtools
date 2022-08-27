@@ -30,6 +30,10 @@ def main():
     _generate.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
     _generate.set_defaults(func=judge.generate_code)
 
+    _info = subparsers.add_parser('info', aliases=['i'], help="Show problem info")
+    _info.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
+    _info.set_defaults(func=boj.problem_info)
+
     _random = subparsers.add_parser('random', aliases=['r'], help="Pick a random problem from solved.ac", allow_abbrev=True)
     _random.add_argument('-b', '--bronze',  action='store_true', help="Pick a random problem from bronze level")
     _random.add_argument('-s', '--silver',  action='store_true', help="Pick a random problem from silver level")

@@ -94,6 +94,23 @@ def show_problem(prob):
         print(tc['out'])
         idx += 1
 
+def problem_info(args):
+    pid = guess_pid(args)
+    if not pid:
+        print("{!] problemID is empty")
+        return
+    print("[+] Show problem info")
+    cur = config.db.cursor()
+    prob = get_cached_problem(pid)
+    if not prob:
+        pick(args)
+        prob = get_cached_problem(pid)
+    problem_info = "[{:d}] {}".format(prob['pid'], prob['title'])
+    sinfo = solved.get_cached_solved(pid)
+    if sinfo and sinfo['level'] != 'Hidden':
+        problem_info += " (" + sinfo['level'] + ")"
+    print(problem_info)
+
 def drop_testcases(prob):
     prob_dir = path.expanduser(config.conf['code_dir']) + sep + str(prob['pid'])
     makedirs(prob_dir, exist_ok=True)
