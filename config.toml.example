@@ -4,6 +4,10 @@ template = "~/.boj/template.cpp"
 open_in_browser = true
 browser = "google-chrome"
 pager = "less"
+lang_id = 84
+tab_width = 4
+# open, close, onlyaccepted
+code_open = "open"
 bojautologin = ""
 solved_token = ""
 

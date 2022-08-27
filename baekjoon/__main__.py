@@ -1,6 +1,7 @@
 from . import boj
 from . import solved
 from . import judge
+from . import submit
 from . import __version__
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -22,7 +23,8 @@ def main():
 
     _submit = subparsers.add_parser('submit', aliases=['s'], help="Submit code", allow_abbrev=True)
     _submit.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
-    _submit.set_defaults(func=judge.submit)
+    _submit.add_argument('-i', '--input', action='store', type=str, help="Input file")
+    _submit.set_defaults(func=submit.submit)
 
     _generate = subparsers.add_parser('generate', aliases=['g'], help="Generate source code from template")
     _generate.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)

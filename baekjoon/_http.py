@@ -48,6 +48,7 @@ async def async_get(url, headers=None):
     elif url.startswith(SOLVED_HOST):
         session = solved_session
     else:
+        print("[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST))
         return None
     result = None
     async with session.get(url, headers=headers) as response:
@@ -60,7 +61,9 @@ async def async_post(url, data, headers=None):
     elif url.startswith(SOLVED_HOST):
         session = solved_session
     else:
+        print("[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST))
         return None
+    session = boj_session
     result = None
     async with session.post(url, headers=headers, data=data) as response:
         return await response.text()
@@ -108,3 +111,23 @@ async def close_solved():
     global solved_session, solved_jar
     await solved_session.__aexit__(None, None, None)
     solved_session = None
+
+async def websockets(url, callback, sid=None):
+    async with boj_session.ws_connect(url) as ws:
+        result = 0
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                js = json.loads(msg.data)
+                if js['event'] == 'pusher:connection_established' and sid:
+                    req_js = {'event':'pusher:subscribe', \
+                        'data':{'channel': 'solution-'+str(sid)}}
+                    await ws.send_str(json.dumps(req_js))
+                elif js['event'] == 'update':
+                    data = json.loads(js['data'])
+                    await callback(data)
+                    if data['result'] > 3:
+                        break
+                elif js['event'] == 'pusher_internal:subscription_succeeded':
+                    continue
+            else:
+                break;

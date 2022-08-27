@@ -10,6 +10,9 @@ DEFAULT_CONFIG = {
     'open_in_browser': True,
     'browser': 'google-chrome',
     'pager': 'less',
+    'code_open': 'open',
+    'tab_width': 4,
+    'lang_id': 84,
     'boj_token': '',
     'solved_token': '',
     'lang': [
@@ -17,6 +20,16 @@ DEFAULT_CONFIG = {
         {'ext': "py", 'cmd': "python3", },
     ],
     }
+
+lang_ids = {
+    84: "C++17",
+    0: "C99",
+    28: "Python 3",
+    88: "C++14",
+    73: "PyPy3",
+    49: "C++11",
+    85: "C++17 (Clang)"
+}
 
 base_dir = environ["HOME"] + "/.boj"
 config_path = base_dir + "/config.toml"
@@ -27,8 +40,9 @@ def load_config():
     global conf, db
     if path.isfile(config_path):
         conf = tomli.load(open(config_path, "rb"))
-    else:
-        conf = DEFAULT_CONFIG
+    for k, v in DEFAULT_CONFIG.items():
+        if not k in conf:
+            conf[k] = v
     for d in [base_dir, conf['cache_dir'], conf['code_dir']]:
         if not path.isdir(path.expanduser(d)):
             makedirs(path.expanduser(d))

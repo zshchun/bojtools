@@ -1,7 +1,9 @@
 from . import ui
+from . import _http
 from . import config
 from .util import *
 from os import unlink
+import asyncio
 
 def find_input_files(_dir):
     ins = [_dir + sep + f for f in listdir(_dir) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
@@ -17,9 +19,6 @@ def compile_code(src_path, run_path):
             print(proc.stderr.decode())
         ui.red("[!] Compile error!")
         exit(1)
-
-def submit(args):
-    print("submit dummy")
 
 def test(args):
     pid = guess_pid(args)
@@ -46,38 +45,47 @@ def test(args):
         output_file = d + sep + 'ans' + f[2:]
         if not path.isfile(output_file):
             continue
-        # TODO diff result
         proc = subprocess.Popen([run_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         inputs = open(in_file, "rb").read()
         proc.stdin.write(inputs)
-        # TODO timeout from answer
         try:
             outputs, error = proc.communicate(timeout=5)
+            if proc.returncode != 0:
+                print("[!] Failed with exit code : {}".format(proc.returncode))
+                if outputs: print(outputs.decode())
+                if error: print(error.decode())
+                continue
             expected_outputs = open(output_file, "rb").read()
             same = True
             report = ''
-            for o1, o2 in zip(outputs.decode().splitlines(), expected_outputs.decode().splitlines()):
+            a = outputs.decode().splitlines()
+            b = expected_outputs.decode().splitlines()
+            max_length = max(len(a), len(b))
+            a += [''] * (max_length - len(a))
+            b += [''] * (max_length - len(b))
+            for o1, o2 in zip(a, b):
                 if o1.strip() == o2.strip():
                     report += ' ' + o1 + '\n'
                     continue
                 else:
                     same = False
-                    report += ui.setcolor('red', '-'+o1) + '\n'
-                    report += ui.setcolor('green', '+'+o2) + '\n'
+                    report += ui.setcolor('red', o1.ljust(20, ' '))
+                    report += ui.setcolor('green', o2.ljust(20, ' ')) + '\n'
             if same:
                 ac += 1
                 ui.green("Passed #{}".format(idx))
             else:
                 ui.red("Failed #{}".format(idx))
+                ui.white("=======  IN #{:d} =======".format(idx))
+                print(inputs.decode())
+                ui.white("======= OUT #{:d} =======".format(idx))
                 print(report)
         except subprocess.TimeoutExpired:
             proc.kill()
             outputs, error = proc.communicate()
             ui.red("[!] Timeout!")
-            if outputs:
-                print(outputs.decode())
-            if error:
-                print(error.decode())
+            if outputs: print(outputs.decode())
+            if error: print(error.decode())
         idx += 1
     total = len(input_files)
     if total == 0:
