@@ -18,7 +18,7 @@ def pick(args):
     else:
         print("[!] problemID not found")
         return
-    prob = asyncio.run(async_pick(pid))
+    prob = asyncio.run(async_pick(pid, force=args.force))
 
 def get_cached_problem(pid):
     cur = config.db.cursor()
@@ -32,10 +32,13 @@ def save_problem_cache(prob):
     cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples'])))
     config.db.commit()
 
-async def async_pick(pid):
+async def async_pick(pid, force=False):
     url = BOJ_HOST + '/problem/' + str(pid)
     print("[+] Pick", url)
-    prob = get_cached_problem(pid)
+    if not force:
+        prob = get_cached_problem(pid)
+    else:
+        prob = None
     if prob:
         show_problem(prob)
         drop_testcases(prob)
@@ -52,7 +55,7 @@ async def async_pick(pid):
         prob['input'] = get_tag_text(doc.xpath('.//div[@id="problem_input"]'))
         prob['output'] = get_tag_text(doc.xpath('.//div[@id="problem_output"]'))
         prob['constraints'] = get_tag_text(doc.xpath('.//div[@id="problem_limit"]'))
-        prob['hint'] = get_tag_texts(doc.xpath('.//div[@id="problem_hint"]'))
+        prob['hint'] = get_tag_text(doc.xpath('.//div[@id="problem_hint"]'))
         lang = doc.xpath('.//div[@id="problem-lang-base64"]')
         prob['lang'] = lang[0].text if lang else None
         prob['spoiler'] = "\n".join([x.text for x in doc.xpath(".//a[@class='spoiler-link']")])

@@ -14,6 +14,7 @@ def main():
 
     _pick = subparsers.add_parser('pick', aliases=['p'], help="Pick a problem", allow_abbrev=True)
     _pick.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
+    _pick.add_argument('-f', '--force', action='store_true', help="Update without cache data")
     _pick.set_defaults(func=boj.pick)
 
     _solution = subparsers.add_parser('solution', aliases=['q'], help="Get problem's solutions", allow_abbrev=True)

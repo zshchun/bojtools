@@ -2,7 +2,7 @@ from . import ui
 from . import _http
 from . import config
 from .util import *
-from os import unlink
+from os import unlink, path
 import asyncio
 
 def find_input_files(_dir):
@@ -109,7 +109,7 @@ def generate_code(args):
     ext = path.splitext(template_path)[-1]
     assert ext != "", "[!] File extension not found"
     new_path = prob_dir + sep + str(pid) + ext
-    if os.path.exists(new_path):
+    if path.exists(new_path):
         print("[!] File exists:", new_path)
         return
     inf = open(template_path, 'r')

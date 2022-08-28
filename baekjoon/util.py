@@ -7,12 +7,12 @@ from os import path, getcwd, sep, makedirs, listdir
 def get_tag_text(tags):
     ret = ''
     for t in tags:
-        ret += "".join([x.replace('\t', '') for x in t.itertext()])
+        ret += "\n".join([x.replace('\t', '') for x in t.itertext()])
     return ret.strip()
 
 def wrap_html_text(s):
     text = html.fromstring(s).itertext()
-    text = text_wrap(''.join(text), config.conf['text_width'])
+    text = text_wrap('\n'.join(text), config.conf['text_width'])
     return text
 
 def guess_pid(args):
