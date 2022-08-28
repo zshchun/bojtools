@@ -124,11 +124,19 @@ def problem_info(args):
     if not prob:
         pick(args)
         prob = get_cached_problem(pid)
-    problem_info = "BOJ {:d} {}".format(prob['pid'], prob['title'])
+
     sinfo = solved.get_cached_solved(pid)
     if sinfo and sinfo['level'] != 'Hidden':
-        problem_info += " (" + sinfo['level'] + ")"
-    print(problem_info)
+        level_info = "(" + sinfo['level'] + ")"
+    else:
+        level_info = ""
+
+    if prob['lang']:
+        multi_lang = json.loads(base64.b64decode(prob['lang']))
+        for lang in multi_lang:
+            print("BOJ {:d} {} {}".format(prob['pid'], lang['title'], level_info))
+    else:
+        print("BOJ {:d} {} {}".format(prob['pid'], prob['title'], level_info))
     print(BOJ_HOST + '/problem/' + str(pid))
 
 def drop_testcases(prob):
