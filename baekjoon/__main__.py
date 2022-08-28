@@ -16,6 +16,10 @@ def main():
     _pick.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
     _pick.set_defaults(func=boj.pick)
 
+    _solution = subparsers.add_parser('solution', aliases=['q'], help="Get problem's solutions", allow_abbrev=True)
+    _solution.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
+    _solution.set_defaults(func=boj.view_solutions)
+
     _test = subparsers.add_parser('test', aliases=['t'], help="Test with testcases", allow_abbrev=True)
     _test.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
     _test.add_argument('-i', '--input', action='store', type=str, help="Input file")

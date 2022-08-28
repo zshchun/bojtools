@@ -10,7 +10,7 @@ from . import _http
 from .util import *
 from .constants import *
 from lxml import etree, html
-from os import makedirs, path, sep
+from os import makedirs, path, sep, system
 import sys
 
 def pick(args):
@@ -149,3 +149,63 @@ def drop_testcases(prob):
         out_path = "{}{}ans{:d}.txt".format(prob_dir, sep, idx)
         open(out_path, 'w').write(tc['out'])
         idx += 1
+
+def view_solutions(args):
+    asyncio.run(async_view_solutions(args))
+
+async def async_view_solutions(args):
+    pid = guess_pid(args)
+    if not pid:
+        print("{!] problemID is empty")
+        return
+    await _http.open_boj()
+    print("[+] View solutions")
+    print(BOJ_HOST + '/problem/' + str(pid))
+    try:
+        # TODO support language_id configuration
+        lang_id = 1001 # C++
+        lang_ext = '.cpp'
+        url = "https://www.acmicpc.net/status?problem_id={}&user_id=&language_id={}&result_id=4".format(pid, lang_id)
+        while True:
+            resp = await _http.async_get(url)
+            doc = html.fromstring(resp)
+            tr = doc.xpath('.//table[@id="status-table"]/tbody/tr[@id]')
+            for row in tr:
+                td = row.xpath('.//td')
+                code_url = td[6].xpath('a[@href]')
+                if len(code_url) == 0: continue
+                submit_id = td[0].text
+                user_info = td[1].xpath('.//span[@class]')
+                if user_info and user_info[0].get('class').startswith('user-'):
+                    # TODO parse atcoder color (coderTextXXXX)
+                    userrank = user_info[0].get('class').split('-')[1]
+                    username = ''.join(user_info[0].itertext()).ljust(20)
+                    username = ui.setcolor(userrank, username)
+                else:
+                    username = ''.join(td[1].itertext()).ljust(20)
+                probinfo = td[2]
+                result = td[3]
+                prog_memory = td[4].text + td[4].xpath('.//span[@class]')[0].get('class').split('-')[0]
+                prog_time = td[5].text + td[5].xpath('.//span[@class]')[0].get('class').split('-')[0]
+                lang_type = code_url[0].text
+                code_url = BOJ_HOST + code_url[0].get('href')
+                code_size = td[7].text + td[7].xpath('.//span[@class]')[0].get('class').split('-')[0]
+                submit_time = td[8].xpath('.//a[@title]')[0].get('title')
+                print("{:9s} {} {:6s} {:6s} {:6s} {:5s} {}".format(
+                    submit_id, username, prog_memory, prog_time, lang_type, code_size, submit_time), end='')
+                choice = input(" View? [Y/n] ").lower()
+                if choice in ['y', 'yes', '']:
+                    cache_dir = path.expanduser(config.conf['cache_dir']) + sep + str(pid)
+                    makedirs(cache_dir, exist_ok=True)
+                    cache_file = cache_dir + sep + submit_id + lang_ext
+                    if not path.isfile(cache_file):
+                        sol = await _http.async_get(code_url)
+                        sdoc = html.fromstring(sol)
+                        src = sdoc.xpath('.//textarea[@name="source"]')[0].text
+                        open(cache_file, 'w').write(src)
+                    system('{} "{}"'.format(config.conf['pager'], cache_file))
+            url = doc.xpath(".//a[@id='next_page']")
+            if not url: break
+            url = BOJ_HOST + url[0].get('href')
+    finally:
+        await _http.close_boj()

@@ -8,6 +8,9 @@ colors = {
     'magenta': "\033[35m",
     'cyan': "\033[36m",
     'white': "\033[37m",
+    'orange': "\033[33m", # yellow
+    'violet': "\033[35m", # magenta
+    'gray': "\033[90m",
     'bright_red': "\033[91m",
     'bright_green': "\033[92m",
     'bright_yellow': "\033[93m",
@@ -21,6 +24,8 @@ colors = {
 def setcolor(c, msg):
     if c and c in colors:
         return colors[c] + msg + colors['nocolor']
+    if c == 'legendary':
+        return colors['white'] + msg[:1] + colors['red'] + msg[1:] + colors['nocolor']
     else:
         return msg;
 

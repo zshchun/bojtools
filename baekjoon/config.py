@@ -29,7 +29,12 @@ lang_ids = {
     88: "C++14",
     73: "PyPy3",
     49: "C++11",
-    85: "C++17 (Clang)"
+    85: "C++17 (Clang)",
+    1001: "C++",
+    1002: "Java",
+    1003: "Python",
+    1004: "C",
+    1005: "Rust",
 }
 
 base_dir = environ["HOME"] + "/.boj"

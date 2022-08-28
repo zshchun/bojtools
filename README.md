@@ -41,6 +41,12 @@ boj submit <번호>
 boj s
 ```
 
+## 다른 솔루션 보기
+```sh
+boj solution <번호>
+boj q
+```
+
 ## 문제 정보
 ```sh
 boj generate <번호>
@@ -60,5 +66,6 @@ boj g
 - [x] Compile and test
 - [x] Submit a code
 - [ ] Extract cookies
-- [ ] Text width
-- [ ] View other solution
+- [x] Text width
+- [x] View other solution
+- [ ] Support multi-platform
