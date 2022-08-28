@@ -1,13 +1,19 @@
 import subprocess
 import unicodedata
 from . import config
+from lxml import etree, html
 from os import path, getcwd, sep, makedirs, listdir
 
-def extract_text(tags):
+def get_tag_text(tags):
     ret = ''
     for t in tags:
         ret += "".join([x.replace('\t', '') for x in t.itertext()])
     return ret.strip()
+
+def wrap_html_text(s):
+    text = html.fromstring(s).itertext()
+    text = text_wrap(''.join(text), config.conf['text_width'])
+    return text
 
 def guess_pid(args):
     if 'pid' in args and args.pid:
@@ -60,6 +66,7 @@ def text_wrap(string, width):
             wcnt = 0
             ret.append(s)
             s = ''
+    if s: ret.append(s)
     return '\n'.join(ret)
 
 def unicode_format(fmt, *args):

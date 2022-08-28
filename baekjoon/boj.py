@@ -48,11 +48,11 @@ async def async_pick(pid):
         prob = {'pid':pid}
         prob['title'] = doc.xpath('.//h1/span[@id="problem_title"]')[0].text
         prob['info'] = {k.text.strip():v.text.strip() for k, v in zip(table.xpath('.//th'), table.xpath('.//td'))}
-        prob['desc'] = extract_text(doc.xpath('.//div[@id="problem_description"]'))
-        prob['input'] = extract_text(doc.xpath('.//div[@id="problem_input"]'))
-        prob['output'] = extract_text(doc.xpath('.//div[@id="problem_output"]'))
-        prob['constraints'] = extract_text(doc.xpath('.//div[@id="problem_limit"]'))
-        prob['hint'] = extract_text(doc.xpath('.//div[@id="problem_hint"]'))
+        prob['desc'] = get_tag_text(doc.xpath('.//div[@id="problem_description"]'))
+        prob['input'] = get_tag_text(doc.xpath('.//div[@id="problem_input"]'))
+        prob['output'] = get_tag_text(doc.xpath('.//div[@id="problem_output"]'))
+        prob['constraints'] = get_tag_text(doc.xpath('.//div[@id="problem_limit"]'))
+        prob['hint'] = get_tag_texts(doc.xpath('.//div[@id="problem_hint"]'))
         lang = doc.xpath('.//div[@id="problem-lang-base64"]')
         prob['lang'] = lang[0].text if lang else None
         prob['spoiler'] = "\n".join([x.text for x in doc.xpath(".//a[@class='spoiler-link']")])
@@ -77,28 +77,31 @@ def show_problem(prob):
     print(unicode_format("\n|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
     print(unicode_format("|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].values()))
     ui.bwhite("\n[{}] {}\n".format(prob['pid'], prob['title']))
+    text_width = config.conf['text_width']
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))
         for lang in multi_lang:
-            print("=" * 30)
+            print("=" * text_width)
             ui.bwhite("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title']))
-            desc_text = html.fromstring(lang['description']).itertext()
-            desc_text = text_wrap(''.join(desc_text), config.conf['text_width'])
+            desc_text = wrap_html_text(lang['description'])
             print(desc_text)
             ui.green("\nInput:")
-            in_text = html.fromstring(lang['input']).itertext()
-            in_text = text_wrap(''.join(in_text), config.conf['text_width'])
+            in_text = wrap_html_text(lang['input'])
             print(''.join(in_text))
             ui.green("\nOutput:")
-            out_text = html.fromstring(lang['output']).itertext()
-            out_text = text_wrap(''.join(out_text), config.conf['text_width'])
+            out_text = wrap_html_text(lang['output'])
             print(''.join(out_text))
+            if lang['hint']:
+                hint_text = wrap_html_text(lang['hint'])
+                print(''.join(hint_text))
     else:
-        print(text_wrap(prob['desc'], config.conf['text_width']))
+        print(text_wrap(prob['desc'], text_width))
         ui.green("\nInput:")
-        print(text_wrap(prob['input'], config.conf['text_width']))
+        print(text_wrap(prob['input'], text_width))
         ui.green("\nOutput:")
-        print(text_wrap(prob['output'], config.conf['text_width']))
+        print(text_wrap(prob['output'], text_width))
+        ui.green("\nHint:")
+        print(text_wrap(prob['hint'], text_width))
 
     if prob['constraints']:
         ui.green("\nContraints:")
