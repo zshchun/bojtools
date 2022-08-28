@@ -35,12 +35,8 @@ def main():
     _info.set_defaults(func=boj.problem_info)
 
     _random = subparsers.add_parser('random', aliases=['r'], help="Pick a random problem from solved.ac", allow_abbrev=True)
-    _random.add_argument('-b', '--bronze',  action='store_true', help="Pick a random problem from bronze level")
-    _random.add_argument('-s', '--silver',  action='store_true', help="Pick a random problem from silver level")
-    _random.add_argument('-g', '--gold',  action='store_true', help="Pick a random problem from gold level")
-    _random.add_argument('-p', '--platinum',  action='store_true', help="Pick a random problem from platinum level")
-    _random.add_argument('-d', '--diamond',  action='store_true', help="Pick a random problem from diamond level")
-    _random.add_argument('-r', '--ruby',  action='store_true', help="Pick a random problem from ruby level")
+    _random.add_argument('level_start',  metavar="level_start (default number=5)", action='store', help="Start of problem level (b, s, g, p, d, r, g5, g4, ...)")
+    _random.add_argument('level_end',  metavar="level_end (default number=1)", nargs='?', action='store', help="End of problem level (b, s, g, p, d, r, g3, g2, g1, ...)")
     _random.set_defaults(func=solved.pick_random)
 
     args = parser.parse_args()

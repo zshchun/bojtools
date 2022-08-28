@@ -6,6 +6,7 @@ browser = "google-chrome"
 pager = "less"
 lang_id = 84
 tab_width = 4
+text_with = 40
 # open, close, onlyaccepted
 code_open = "open"
 bojautologin = ""

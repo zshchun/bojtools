@@ -7,6 +7,7 @@ import sqlite3
 import asyncio
 
 levels = ('b', 's', 'g', 'p', 'd', 'r')
+level_nums = ('5', '4', '3', '2', '1')
 
 def extract_problem(tr):
     td = tr.xpath('.//td')
@@ -19,14 +20,21 @@ def extract_problem(tr):
     return prob
 
 def pick_random(args):
-    if   args.bronze:   level = 'b'
-    elif args.silver:   level = 's'
-    elif args.gold:     level = 'g'
-    elif args.platinum: level = 'p'
-    elif args.diamond:  level = 'd'
-    elif args.ruby:     level = 'r'
-    else: return
-    asyncio.run(async_pick_random(level))
+    lv_start = str(args.level_start)[:2]
+    if not lv_start[0] in levels or (len(lv_start) == 2 and not lv_start[1] in level_nums):
+        print("[!] Failed to parse problem level")
+        return
+    if 'level_end' in args and args.level_end:
+        lv_end = str(args.level_end)[:2]
+        if not lv_end[0] in levels or (len(lv_end) == 2 and not lv_end[1] in level_nums):
+            print("[!] Failed to parse problem level")
+            return
+    else:
+        lv_end = lv_start[0]
+
+    if len(lv_start) == 1: lv_start += '5'
+    if len(lv_end) == 1: lv_end += '1'
+    asyncio.run(async_pick_random(lv_start, lv_end))
 
 def save_solved_list(tr):
     cur = config.db.cursor()
@@ -42,13 +50,10 @@ def get_cached_solved(pid):
     info = {'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4], 'solved':q[5]}
     return info
 
-async def async_pick_random(level):
-    if not level in levels: return
+async def async_pick_random(lv_start, lv_end):
     await _http.open_solved()
     try:
-        lv_num_start = 5
-        lv_num_end = 1
-        lv_range = "{}{:d}..{}{:d}".format(level, lv_num_start, level, lv_num_end)
+        lv_range = "{}..{}".format(lv_start, lv_end)
         print('[+] Random pick', lv_range)
         page = 1
         url = '{}/search?query=*{}~@$me&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, lv_range, page)

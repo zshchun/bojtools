@@ -2,6 +2,7 @@ import json
 import base64
 import asyncio
 import sqlite3
+import textwrap
 from . import ui
 from . import solved
 from . import config
@@ -74,17 +75,35 @@ async def async_pick(pid):
         await _http.close_boj()
 
 def show_problem(prob):
-    print(unicode_format("|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
+    print(unicode_format("\n|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
     print(unicode_format("|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].values()))
     ui.bwhite("\n[{}] {}\n".format(prob['pid'], prob['title']))
-    print(prob['desc'])
+    if prob['lang']:
+        multi_lang = json.loads(base64.b64decode(prob['lang']))
+        for lang in multi_lang:
+            print("=" * 30)
+            ui.bwhite("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title']))
+            desc_text = html.fromstring(lang['description']).itertext()
+            desc_text = textwrap.fill(''.join(desc_text), config.conf['text_width'])
+            print(desc_text)
+            ui.green("\nInput:")
+            in_text = html.fromstring(lang['input']).itertext()
+            in_text = textwrap.fill(''.join(in_text), config.conf['text_width'])
+            print(''.join(in_text))
+            ui.green("\nOutput:")
+            out_text = html.fromstring(lang['output']).itertext()
+            out_text = textwrap.fill(''.join(out_text), config.conf['text_width'])
+            print(''.join(out_text))
+    else:
+        print(textwrap.fill(prob['desc'], config.conf['text_width']))
+        ui.green("\nInput:")
+        print(textwrap.fill(prob['input'], config.conf['text_width']))
+        ui.green("\nOutput:")
+        print(textwrap.fill(prob['output'], config.conf['text_width']))
+
     if prob['constraints']:
         ui.green("\nContraints:")
         print(prob['constraints'])
-    ui.green("\nInput:")
-    print(prob['input'])
-    ui.green("\nOutput:")
-    print(prob['output'])
     ui.bwhite("\nSamples:")
     idx = 1
     for tc in prob['samples']:
@@ -105,11 +124,12 @@ def problem_info(args):
     if not prob:
         pick(args)
         prob = get_cached_problem(pid)
-    problem_info = "[{:d}] {}".format(prob['pid'], prob['title'])
+    problem_info = "BOJ {:d} {}".format(prob['pid'], prob['title'])
     sinfo = solved.get_cached_solved(pid)
     if sinfo and sinfo['level'] != 'Hidden':
         problem_info += " (" + sinfo['level'] + ")"
     print(problem_info)
+    print(BOJ_HOST + '/problem/' + str(pid))
 
 def drop_testcases(prob):
     prob_dir = path.expanduser(config.conf['code_dir']) + sep + str(prob['pid'])
