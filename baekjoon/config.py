@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     'pager': 'less',
     'code_open': 'open',
     'tab_width': 4,
-    'text_width': 50,
+    'text_width': 70,
     'lang_id': 84,
     'boj_token': '',
     'solved_token': '',

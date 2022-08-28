@@ -2,7 +2,6 @@ import json
 import base64
 import asyncio
 import sqlite3
-import textwrap
 from . import ui
 from . import solved
 from . import config
@@ -84,22 +83,22 @@ def show_problem(prob):
             print("=" * 30)
             ui.bwhite("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title']))
             desc_text = html.fromstring(lang['description']).itertext()
-            desc_text = textwrap.fill(''.join(desc_text), config.conf['text_width'])
+            desc_text = text_wrap(''.join(desc_text), config.conf['text_width'])
             print(desc_text)
             ui.green("\nInput:")
             in_text = html.fromstring(lang['input']).itertext()
-            in_text = textwrap.fill(''.join(in_text), config.conf['text_width'])
+            in_text = text_wrap(''.join(in_text), config.conf['text_width'])
             print(''.join(in_text))
             ui.green("\nOutput:")
             out_text = html.fromstring(lang['output']).itertext()
-            out_text = textwrap.fill(''.join(out_text), config.conf['text_width'])
+            out_text = text_wrap(''.join(out_text), config.conf['text_width'])
             print(''.join(out_text))
     else:
-        print(textwrap.fill(prob['desc'], config.conf['text_width']))
+        print(text_wrap(prob['desc'], config.conf['text_width']))
         ui.green("\nInput:")
-        print(textwrap.fill(prob['input'], config.conf['text_width']))
+        print(text_wrap(prob['input'], config.conf['text_width']))
         ui.green("\nOutput:")
-        print(textwrap.fill(prob['output'], config.conf['text_width']))
+        print(text_wrap(prob['output'], config.conf['text_width']))
 
     if prob['constraints']:
         ui.green("\nContraints:")

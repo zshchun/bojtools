@@ -45,6 +45,23 @@ def select_source_code(pid):
         return None
     return files[0]
 
+def text_wrap(string, width):
+    ret = []
+    wcnt = 0
+    s = ''
+    for c in string:
+        if unicodedata.east_asian_width(c) in ['F', 'W']:
+            wcnt += 2
+        else:
+            wcnt += 1
+        if c != '\n':
+            s += c
+        if wcnt >= width or c == '\n':
+            wcnt = 0
+            ret.append(s)
+            s = ''
+    return '\n'.join(ret)
+
 def unicode_format(fmt, *args):
     new_fmt = ''
     new_args = []
