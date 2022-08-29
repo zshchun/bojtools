@@ -40,18 +40,18 @@ def save_solved_list(tr):
     cur = config.db.cursor()
     for t in tr:
         prob = extract_problem(t)
-        cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level, solved) VALUES (?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level'], False))
+        cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level) VALUES (?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level']))
     config.db.commit()
 
 def get_cached_level(pid):
     cur = config.db.cursor()
-    q = cur.execute(f'''SELECT pid, title, solved_count, avg_try, level, solved FROM solved WHERE pid={pid}''').fetchone()
+    q = cur.execute(f'''SELECT pid, title, solved_count, avg_try, level FROM solved WHERE pid={pid}''').fetchone()
     if not q: return {}
-    info = {'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4], 'solved':q[5]}
+    info = { 'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4] }
     return info
 
 def get_problem_level(pid):
-    asyncio.run(async_get_problem_level(pid))
+    return asyncio.run(async_get_problem_level(pid))
 
 async def async_get_problem_level(pid):
     await _http.open_solved()

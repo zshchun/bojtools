@@ -57,8 +57,8 @@ def load_config():
     if not path.isfile(db_path):
         db = sqlite3.connect(db_path)
         cur = db.cursor()
-        cur.execute('''CREATE TABLE boj (pid integer primary key, title varchar, info varchar, desc varchar, input varchar, output varchar, constraints varchar, hint varchar, lang varchar, spoiler varchar, samples varchar);''')
-        cur.execute('''CREATE TABLE solved (pid integer primary key, title varchar, solved_count integer, avg_try float, level varchar, solved boolean);''')
+        cur.execute('''CREATE TABLE boj (pid integer primary key, title varchar, info varchar, desc varchar, input varchar, output varchar, constraints varchar, hint varchar, lang varchar, spoiler varchar, samples varchar, accepted boolean);''')
+        cur.execute('''CREATE TABLE solved (pid integer primary key, title varchar, solved_count integer, avg_try float, level varchar);''')
         db.commit()
     else:
         db = sqlite3.connect(db_path)

@@ -89,4 +89,6 @@ async def display_submit_result(data):
         msg += ui.setcolor('blue', "Runtime Error")
     elif result == 11:
         msg += ui.setcolor('blue', "Compile Error")
+    if result >= 4:
+        print()
     ui.redraw(msg)

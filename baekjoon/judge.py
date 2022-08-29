@@ -11,7 +11,7 @@ def find_input_files(_dir):
 
 def compile_code(src_path, run_path):
     print("[+] Compile {}".format(src_path))
-    proc = subprocess.run(["g++", "-O2", "-o", run_path, src_path], capture_output=True)
+    proc = subprocess.run(["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", run_path, src_path], capture_output=True)
     if proc.returncode != 0:
         if proc.stdout:
             print(proc.stdout.decode())

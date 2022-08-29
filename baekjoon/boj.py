@@ -12,28 +12,33 @@ from lxml import etree, html
 from os import makedirs, path, sep, system
 import sys
 
-def pick(args):
+def pick(args, silent=False):
     pid = guess_pid(args)
     if not pid:
         print("[!] Select a problem ID")
         return
-    prob = asyncio.run(async_pick(pid, force=args.force))
+    if 'force' in args:
+        force = args.force
+    else:
+        force = False
+    prob = asyncio.run(async_pick(pid, force=force, silent=silent))
 
 def get_cached_problem(pid):
     cur = config.db.cursor()
-    q = cur.execute(f'''SELECT title, info, desc, input, output, constraints, hint, lang, spoiler, samples FROM boj WHERE pid = {pid};''').fetchone()
+    q = cur.execute(f'''SELECT title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted FROM boj WHERE pid = {pid};''').fetchone()
     if not q: return []
-    prob = {'pid':pid, 'title':q[0], 'info':json.loads(q[1]), 'desc':q[2], 'input':q[3], 'output':q[4], 'constraints':q[5], 'hint':q[6], 'lang':q[7], 'spoiler':q[8], 'samples':json.loads(q[9])}
+    prob = { 'pid':pid, 'title':q[0], 'info':json.loads(q[1]), 'desc':q[2], 'input':q[3], 'output':q[4], 'constraints':q[5], 'hint':q[6], 'lang':q[7], 'spoiler':q[8], 'samples':json.loads(q[9]), 'accepted':q[10] }
     return prob
 
 def save_problem_cache(prob):
     cur = config.db.cursor()
-    cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples'])))
+    cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples']), False))
     config.db.commit()
 
-async def async_pick(pid, force=False):
+async def async_pick(pid, force=False, silent=False):
     url = BOJ_HOST + '/problem/' + str(pid)
-    print("[+] Pick", url)
+    if not silent:
+        print("[+] Pick", url)
     if not force:
         prob = get_cached_problem(pid)
     else:
@@ -70,7 +75,8 @@ async def async_pick(pid, force=False):
                 testcases[num]['out'] = s.text
         prob['samples'] = list(testcases.values())
         save_problem_cache(prob)
-        show_problem(prob)
+        if not silent:
+            show_problem(prob)
         drop_testcases(prob)
     finally:
         await _http.close_boj()
@@ -127,7 +133,7 @@ def problem_info(args):
     cur = config.db.cursor()
     prob = get_cached_problem(pid)
     if not prob:
-        pick(args)
+        pick(args, silent=True)
         prob = get_cached_problem(pid)
 
     level_info = ""
@@ -217,11 +223,9 @@ async def async_view_solutions(args):
     finally:
         await _http.close_boj()
 
-def set_problem_as_solved(pid):
+def set_problem_accepted(pid):
     if not pid:
         return
     cur = config.db.cursor()
-    q = cur.execute(f'''UPDATE boj SET solved = 1 WHERE pid = {pid};''')
+    q = cur.execute(f'''UPDATE boj SET accepted = 1 WHERE pid = {pid};''')
     q.commit()
-
-
