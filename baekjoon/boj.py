@@ -131,7 +131,7 @@ def problem_info(args):
         prob = get_cached_problem(pid)
 
     level_info = ""
-    if 'level' in args:
+    if 'level' in args and args.level:
         sinfo = solved.get_cached_level(pid)
         if not sinfo:
             sinfo = solved.get_problem_level(pid)
