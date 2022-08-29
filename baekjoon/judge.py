@@ -6,7 +6,7 @@ from os import unlink, path
 import asyncio
 
 def find_input_files(_dir):
-    ins = [_dir + sep + f for f in listdir(_dir) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
+    ins = [_dir + sep + f for f in sorted(listdir(_dir)) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
     return ins
 
 def compile_code(src_path, run_path):

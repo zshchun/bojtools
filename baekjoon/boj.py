@@ -228,4 +228,4 @@ def set_problem_accepted(pid):
         return
     cur = config.db.cursor()
     q = cur.execute(f'''UPDATE boj SET accepted = 1 WHERE pid = {pid};''')
-    q.commit()
+    config.db.commit()
