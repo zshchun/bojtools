@@ -37,6 +37,7 @@ def main():
 
     _info = subparsers.add_parser('info', aliases=['i'], help="Show problem info")
     _info.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
+    _info.add_argument('-l', '--level', action='store_true', help="Show problem level")
     _info.set_defaults(func=boj.problem_info)
 
     _random = subparsers.add_parser('random', aliases=['r'], help="Pick a random problem from solved.ac", allow_abbrev=True)

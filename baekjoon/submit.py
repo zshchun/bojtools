@@ -57,7 +57,7 @@ async def async_submit(args):
                     sid = sids.split(',')[0]
         print("Waiting")
         ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
-        await _http.websockets(ws_url, display_submit_result, sid=sid)
+        await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
     finally:
         await _http.close_boj()
 

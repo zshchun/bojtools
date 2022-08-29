@@ -43,12 +43,27 @@ def save_solved_list(tr):
         cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level, solved) VALUES (?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level'], False))
     config.db.commit()
 
-def get_cached_solved(pid):
+def get_cached_level(pid):
     cur = config.db.cursor()
     q = cur.execute(f'''SELECT pid, title, solved_count, avg_try, level, solved FROM solved WHERE pid={pid}''').fetchone()
     if not q: return {}
     info = {'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4], 'solved':q[5]}
     return info
+
+def get_problem_level(pid):
+    asyncio.run(async_get_problem_level(pid))
+
+async def async_get_problem_level(pid):
+    await _http.open_solved()
+    try:
+        url = SOLVED_HOST + '/search?query=' + str(pid)
+        resp = await _http.async_get(url)
+        doc = html.fromstring(resp)
+        tr = doc.xpath(".//table[@style='min-width:800px' and @class]//tr")
+        save_solved_list(tr[1:])
+        return get_cached_level(pid)
+    finally:
+        await _http.close_solved()
 
 async def async_pick_random(lv_start, lv_end):
     await _http.open_solved()

@@ -1,4 +1,5 @@
 from . import config
+from . import boj
 from .constants import *
 from os import path
 import asyncio
@@ -112,7 +113,7 @@ async def close_solved():
     await solved_session.__aexit__(None, None, None)
     solved_session = None
 
-async def websockets(url, callback, sid=None):
+async def websockets(url, callback, pid=None, sid=None):
     async with boj_session.ws_connect(url) as ws:
         result = 0
         async for msg in ws:
@@ -125,6 +126,8 @@ async def websockets(url, callback, sid=None):
                 elif js['event'] == 'update':
                     data = json.loads(js['data'])
                     await callback(data)
+                    if data['result'] == 4:
+                        boj.set_problem_as_solved(pid)
                     if data['result'] > 3:
                         break
                 elif js['event'] == 'pusher_internal:subscription_succeeded':

@@ -13,10 +13,9 @@ from os import makedirs, path, sep, system
 import sys
 
 def pick(args):
-    if args.pid:
-        pid = args.pid
-    else:
-        print("[!] problemID not found")
+    pid = guess_pid(args)
+    if not pid:
+        print("[!] Select a problem ID")
         return
     prob = asyncio.run(async_pick(pid, force=args.force))
 
@@ -103,8 +102,9 @@ def show_problem(prob):
         print(text_wrap(prob['input'], text_width))
         ui.green("\nOutput:")
         print(text_wrap(prob['output'], text_width))
-        ui.green("\nHint:")
-        print(text_wrap(prob['hint'], text_width))
+        if prob['hint']:
+            ui.green("\nHint:")
+            print(text_wrap(prob['hint'], text_width))
 
     if prob['constraints']:
         ui.green("\nContraints:")
@@ -121,7 +121,7 @@ def show_problem(prob):
 def problem_info(args):
     pid = guess_pid(args)
     if not pid:
-        print("{!] problemID is empty")
+        print("[!] problemID is empty")
         return
     print("[+] Show problem info")
     cur = config.db.cursor()
@@ -130,11 +130,13 @@ def problem_info(args):
         pick(args)
         prob = get_cached_problem(pid)
 
-    sinfo = solved.get_cached_solved(pid)
-    if sinfo and sinfo['level'] != 'Hidden':
-        level_info = "(" + sinfo['level'] + ")"
-    else:
-        level_info = ""
+    level_info = ""
+    if 'level' in args:
+        sinfo = solved.get_cached_level(pid)
+        if not sinfo:
+            sinfo = solved.get_problem_level(pid)
+        if sinfo and sinfo['level'] != 'Hidden':
+            level_info = "(" + sinfo['level'] + ")"
 
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))
@@ -214,3 +216,12 @@ async def async_view_solutions(args):
             url = BOJ_HOST + url[0].get('href')
     finally:
         await _http.close_boj()
+
+def set_problem_as_solved(pid):
+    if not pid:
+        return
+    cur = config.db.cursor()
+    q = cur.execute(f'''UPDATE boj SET solved = 1 WHERE pid = {pid};''')
+    q.commit()
+
+
