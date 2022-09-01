@@ -206,7 +206,7 @@ async def async_view_solutions(args):
                 submit_time = td[8].xpath('.//a[@title]')[0].get('title')
                 print("{:9s} {} {:6s} {:6s} {:6s} {:5s} {}".format(
                     submit_id, username, prog_memory, prog_time, lang_type, code_size, submit_time), end='')
-                choice = input(" View? [Y/n] ").lower()
+                choice = input(" View? [Ynq] ").lower()
                 if choice in ['y', 'yes', '']:
                     cache_dir = path.expanduser(config.conf['cache_dir']) + sep + str(pid)
                     makedirs(cache_dir, exist_ok=True)
@@ -217,6 +217,8 @@ async def async_view_solutions(args):
                         src = sdoc.xpath('.//textarea[@name="source"]')[0].text
                         open(cache_file, 'w').write(src)
                     system('{} "{}"'.format(config.conf['pager'], cache_file))
+                elif choice in ['q', 'quit']:
+                    return
             url = doc.xpath(".//a[@id='next_page']")
             if not url: break
             url = BOJ_HOST + url[0].get('href')
