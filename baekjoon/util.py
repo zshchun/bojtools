@@ -7,7 +7,7 @@ from os import path, getcwd, sep, makedirs, listdir
 def get_tag_text(tags):
     ret = ''
     for t in tags:
-        ret += "\n".join([x.replace('\t', '') for x in t.itertext()])
+        ret += t.text_content()
     return ret.strip()
 
 def wrap_html_text(s):
