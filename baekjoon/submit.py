@@ -1,6 +1,6 @@
 from . import config
 from . import _http
-from . import ui
+from .ui import *
 from .util import *
 from lxml import etree, html
 from urllib.parse import quote_plus
@@ -28,7 +28,7 @@ async def async_submit(args):
     if not path.isfile(filename):
         print("[!] File not found : {}".format(filename))
         return
-    ui.green("[+] Submit {}".format(filename))
+    print(GREEN("[+] Submit {}".format(filename)))
     await _http.open_boj()
     try:
         url = 'https://www.acmicpc.net/submit/' + str(pid)
@@ -47,7 +47,7 @@ async def async_submit(args):
         doc = html.fromstring(resp)
         alert = doc.xpath('.//div[@class="alert-body"]')[0].text
         if alert:
-            ui.bwhite(alert)
+            print(BWHITE(alert))
             return
         js = doc.xpath('.//script[@type="text/javascript" and not(@src)]')
         for lines in js:
@@ -74,21 +74,21 @@ async def display_submit_result(data):
         else:
             msg += "  0%     "
     elif result == 4:
-        msg += "{:s}\n{:6d}KB {:6d}ms".format(ui.setcolor("green", "Accepted"), data['memory'], data['time'])
+        msg += "{:s}\n{:6d}KB {:6d}ms".format(GREEN("Accepted"), data['memory'], data['time'])
     elif result == 5:
-        msg += ui.setcolor('red', "Wrong Output Format")
+        msg += RED("Wrong Output Format")
     elif result == 6:
-        msg += ui.setcolor('red', "Wrong Answer")
+        msg += RED("Wrong Answer")
     elif result == 7:
-        msg += ui.setcolor('red', "Time Limit Exceed")
+        msg += RED("Time Limit Exceed")
     elif result == 8:
-        msg += ui.setcolor('blue', "Memory Limit Exceed")
+        msg += BLUE("Memory Limit Exceed")
     elif result == 8:
-        msg += ui.setcolor('blue', "Output Limit Exceed")
+        msg += BLUE("Output Limit Exceed")
     elif result == 10:
-        msg += ui.setcolor('blue', "Runtime Error")
+        msg += BLUE("Runtime Error")
     elif result == 11:
-        msg += ui.setcolor('blue', "Compile Error")
+        msg += BLUE("Compile Error")
     if result >= 4:
         print()
-    ui.redraw(msg)
+    redraw(msg)

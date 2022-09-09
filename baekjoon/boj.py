@@ -2,10 +2,10 @@ import json
 import base64
 import asyncio
 import sqlite3
-from . import ui
 from . import solved
 from . import config
 from . import _http
+from .ui import *
 from .util import *
 from .constants import *
 from lxml import etree, html
@@ -84,19 +84,19 @@ async def async_pick(pid, force=False, silent=False):
 def show_problem(prob):
     print(unicode_format("\n|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
     print(unicode_format("|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].values()))
-    ui.bwhite("\n[{}] {}\n".format(prob['pid'], prob['title']))
+    print(BWHITE("\n[{}] {}\n".format(prob['pid'], prob['title'])))
     text_width = config.conf['text_width']
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))
         for lang in multi_lang:
             print("=" * text_width)
-            ui.bwhite("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title']))
+            print(BWHITE("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title'])))
             desc_text = wrap_html_text(lang['description'])
             print(desc_text)
-            ui.green("\nInput:")
+            print(GREEN("\nInput:"))
             in_text = wrap_html_text(lang['input'])
             print(''.join(in_text))
-            ui.green("\nOutput:")
+            print(GREEN("\nOutput:"))
             out_text = wrap_html_text(lang['output'])
             print(''.join(out_text))
             if lang['hint']:
@@ -104,23 +104,23 @@ def show_problem(prob):
                 print(''.join(hint_text))
     else:
         print(text_wrap(prob['desc'], text_width))
-        ui.green("\nInput:")
+        print(GREEN("\nInput:"))
         print(text_wrap(prob['input'], text_width))
-        ui.green("\nOutput:")
+        print(GREEN("\nOutput:"))
         print(text_wrap(prob['output'], text_width))
         if prob['hint']:
-            ui.green("\nHint:")
+            print(GREEN("\nHint:"))
             print(text_wrap(prob['hint'], text_width))
 
     if prob['constraints']:
-        ui.green("\nContraints:")
+        print(GREEN("\nContraints:"))
         print(prob['constraints'])
-    ui.bwhite("\nSamples:")
+    print(BWHITE("\nSamples:"))
     idx = 1
     for tc in prob['samples']:
-        ui.green("INPUT{}:".format(idx))
+        print(GREEN("INPUT{}:".format(idx)))
         print(tc['in'])
-        ui.green("OUTPUT{}:".format(idx))
+        print(GREEN("OUTPUT{}:".format(idx)))
         print(tc['out'])
         idx += 1
 
@@ -193,7 +193,7 @@ async def async_view_solutions(args):
                     # TODO parse atcoder color (coderTextXXXX)
                     userrank = user_info[0].get('class').split('-')[1]
                     username = ''.join(user_info[0].itertext()).ljust(20)
-                    username = ui.setcolor(userrank, username)
+                    username = setcolor(userrank, username)
                 else:
                     username = ''.join(td[1].itertext()).ljust(20)
                 probinfo = td[2]

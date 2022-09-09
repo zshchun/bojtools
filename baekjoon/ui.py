@@ -29,50 +29,50 @@ def setcolor(c, msg):
     else:
         return msg;
 
-def blue(msg, end=linesep):
-    print(colors['blue'] + msg + colors['nocolor'], end=end)
+def BLUE(msg):
+    return colors['blue'] + msg + colors['nocolor']
 
-def red(msg, end=linesep):
-    print(colors['red'] + msg + colors['nocolor'], end=end)
+def RED(msg):
+    return colors['red'] + msg + colors['nocolor']
 
-def green(msg, end=linesep):
-    print(colors['green'] + msg + colors['nocolor'], end=end)
+def GREEN(msg):
+    return colors['green'] + msg + colors['nocolor']
 
-def yellow(msg, end=linesep):
-    print(colors['yellow'] + msg + colors['nocolor'], end=end)
+def YELLOW(msg):
+    return colors['yellow'] + msg + colors['nocolor']
 
-def magenta(msg, end=linesep):
-    print(colors['magenta'] + msg + colors['nocolor'], end=end)
+def MAGENTA(msg):
+    return colors['magenta'] + msg + colors['nocolor']
 
-def cyan(msg, end=linesep):
-    print(colors['cyan'] + msg + colors['nocolor'], end=end)
+def CYAN(msg):
+    return colors['cyan'] + msg + colors['nocolor']
 
-def white(msg, end=linesep):
-    print(colors['white'] + msg + colors['nocolor'], end=end)
+def WHITE(msg):
+    return colors['white'] + msg + colors['nocolor']
 
-def bblue(msg, end=linesep):
-    print(colors['bright_blue'] + msg + colors['nocolor'], end=end)
+def BBLUE(msg):
+    return colors['bright_blue'] + msg + colors['nocolor']
 
-def bred(msg, end=linesep):
-    print(colors['bright_red'] + msg + colors['nocolor'], end=end)
+def BRED(msg):
+    return colors['bright_red'] + msg + colors['nocolor']
 
-def bgreen(msg, end=linesep):
-    print(colors['bright_green'] + msg + colors['nocolor'], end=end)
+def BGREEN(msg):
+    return colors['bright_green'] + msg + colors['nocolor']
 
-def byellow(msg, end=linesep):
-    print(colors['bright_yellow'] + msg + colors['nocolor'], end=end)
+def BYELLOW(msg):
+    return colors['bright_yellow'] + msg + colors['nocolor']
 
-def bmagenta(msg, end=linesep):
-    print(colors['bright_magenta'] + msg + colors['nocolor'], end=end)
+def BMAGENTA(msg):
+    return colors['bright_magenta'] + msg + colors['nocolor']
 
-def bcyan(msg, end=linesep):
-    print(colors['bright_cyan'] + msg + colors['nocolor'], end=end)
+def BCYAN(msg):
+    return colors['bright_cyan'] + msg + colors['nocolor']
 
-def bwhite(msg, end=linesep):
-    print(colors['bright_white'] + msg + colors['nocolor'], end=end)
+def BWHITE(msg):
+    return colors['bright_white'] + msg + colors['nocolor']
 
-def gray(msg, end=linesep):
-    print(colors['gray'] + msg + colors['nocolor'], end=end)
+def GRAY(msg):
+    return colors['gray'] + msg + colors['nocolor']
 
 def redraw(msg, end=linesep):
     print('\033[A' + msg, end=end)

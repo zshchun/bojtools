@@ -1,6 +1,6 @@
-from . import ui
 from . import _http
 from . import config
+from .ui import *
 from .util import *
 from os import unlink, path
 import asyncio
@@ -17,7 +17,7 @@ def compile_code(src_path, run_path):
             print(proc.stdout.decode())
         if proc.stderr:
             print(proc.stderr.decode())
-        ui.red("[!] Compile error!")
+        print(RED("[!] Compile error!"))
         exit(1)
 
 def test(args):
@@ -63,33 +63,33 @@ def test(args):
                     continue
                 else:
                     same = False
-                    report += ui.setcolor('red', o1.ljust(20, ' '))
-                    report += ui.setcolor('green', o2.ljust(20, ' ')) + '\n'
+                    report += RED(o1.ljust(20, ' '))
+                    report += GREEN(o2.ljust(20, ' ')) + '\n'
             if same:
                 ac += 1
-                ui.green("Passed #{}".format(idx))
+                print(GREEN("Passed #{}".format(idx)))
             else:
-                ui.red("Failed #{}".format(idx))
-                ui.white("=======  IN #{:d} =======".format(idx))
+                print(RED("Failed #{}".format(idx)))
+                print(WHITE("=======  IN #{:d} =======".format(idx)))
                 print(inputs.decode())
-                ui.white("======= OUT #{:d} =======".format(idx))
+                print(WHITE("======= OUT #{:d} =======".format(idx)))
                 print(report)
         except subprocess.CalledProcessError as e:
-            ui.red("Failed #{}".format(idx))
+            print(RED("Failed #{}".format(idx)))
             if outputs: print(outputs.decode())
-            ui.gray(str(e))
+            print(GRAY(str(e)))
         except subprocess.TimeoutExpired as e:
-            ui.red("Failed #{}".format(idx, e.returncode))
+            print(RED("Failed #{}".format(idx, e.returncode)))
             if outputs: print(outputs.decode())
-            ui.gray(str(e))
+            print(GRAY(str(e)))
     total = len(input_files)
     ac_text = "[{}/{}]".format(ac, total)
     if total == 0:
-        ui.red("[!] There is no testcases")
+        print(RED("[!] There is no testcases"))
     elif total == ac:
-        print(ac_text, ui.setcolor("green", "Accepted"))
+        print(ac_text, GREEN("Accepted"))
     else:
-        print(ac_text, ui.setcolor("red", "Wrong Answer"))
+        print(ac_text, RED("Wrong Answer"))
     unlink(run_path)
 
 def generate_code(args):
@@ -112,4 +112,4 @@ def generate_code(args):
     outf = open(new_path, 'w')
     for line in inf:
         outf.write(line)
-    ui.green('[+] Generate {}'.format(new_path))
+    print(GREEN('[+] Generate {}'.format(new_path)))
