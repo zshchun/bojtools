@@ -71,5 +71,8 @@ def bcyan(msg, end=linesep):
 def bwhite(msg, end=linesep):
     print(colors['bright_white'] + msg + colors['nocolor'], end=end)
 
+def gray(msg, end=linesep):
+    print(colors['gray'] + msg + colors['nocolor'], end=end)
+
 def redraw(msg, end=linesep):
     print('\033[A' + msg, end=end)

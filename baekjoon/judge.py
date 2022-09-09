@@ -38,23 +38,17 @@ def test(args):
     input_files = find_input_files(prob_dir)
     compile_code(filename, run_path)
     ac = 0
-    idx = 1
+    idx = 0
     for in_file in input_files:
+        idx += 1
         d = path.dirname(in_file)
         f = path.basename(in_file)
         output_file = d + sep + 'ans' + f[2:]
         if not path.isfile(output_file):
             continue
-        proc = subprocess.Popen([run_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         inputs = open(in_file, "rb").read()
-        proc.stdin.write(inputs)
         try:
-            outputs, error = proc.communicate(timeout=5)
-            if proc.returncode != 0:
-                print("[!] Failed with exit code : {}".format(proc.returncode))
-                if outputs: print(outputs.decode())
-                if error: print(error.decode())
-                continue
+            outputs = subprocess.check_output([run_path], input=inputs, stderr=subprocess.STDOUT, timeout=5)
             expected_outputs = open(output_file, "rb").read()
             same = True
             report = ''
@@ -80,20 +74,22 @@ def test(args):
                 print(inputs.decode())
                 ui.white("======= OUT #{:d} =======".format(idx))
                 print(report)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            outputs, error = proc.communicate()
-            ui.red("[!] Timeout!")
+        except subprocess.CalledProcessError as e:
+            ui.red("Failed #{}".format(idx))
             if outputs: print(outputs.decode())
-            if error: print(error.decode())
-        idx += 1
+            ui.gray(str(e))
+        except subprocess.TimeoutExpired as e:
+            ui.red("Failed #{}".format(idx, e.returncode))
+            if outputs: print(outputs.decode())
+            ui.gray(str(e))
     total = len(input_files)
+    ac_text = "[{}/{}]".format(ac, total)
     if total == 0:
         ui.red("[!] There is no testcases")
     elif total == ac:
-        ui.green("[{}/{}] Accepted".format(ac, total))
+        print(ac_text, ui.setcolor("green", "Accepted"))
     else:
-        ui.red("[{}/{}] Wrong Answer".format(ac, total))
+        print(ac_text, ui.setcolor("red", "Wrong Answer"))
     unlink(run_path)
 
 def generate_code(args):
