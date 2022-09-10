@@ -34,7 +34,26 @@ def pick_random(args):
 
     if len(lv_start) == 1: lv_start += '5'
     if len(lv_end) == 1: lv_end += '1'
-    asyncio.run(async_pick_random(lv_start, lv_end))
+    lv_range = "{}..{}".format(lv_start, lv_end)
+    print('[+] Random pick', lv_range)
+    page = 1
+    url = '{}/search?query=*{}~@$me&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, lv_range, page)
+    asyncio.run(async_query_solvedac(url, args.list))
+
+def pick_class(args):
+    level = args.level
+    if level < 1 or level > 10:
+        print("[!] Out of class range")
+        return
+    print('[+] Pick class', level)
+    extra_options = ''
+    if not args.all:
+        extra_options += ' ~@$me'
+    if args.essential:
+        url = '{}/search?query=in_class_essentials:{}{}'.format(SOLVED_HOST, level, extra_options)
+    else:
+        url = '{}/search?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
+    asyncio.run(async_query_solvedac(url, args.list))
 
 def save_solved_list(tr):
     cur = config.db.cursor()
@@ -65,18 +84,22 @@ async def async_get_problem_level(pid):
     finally:
         await _http.close_solved()
 
-async def async_pick_random(lv_start, lv_end):
+async def async_query_solvedac(url, listing=False):
     await _http.open_solved()
     try:
-        lv_range = "{}..{}".format(lv_start, lv_end)
-        print('[+] Random pick', lv_range)
-        page = 1
-        url = '{}/search?query=*{}~@$me&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, lv_range, page)
         resp = await _http.async_get(url)
         doc = html.fromstring(resp)
         tr = doc.xpath(".//table[@style='min-width:800px' and @class]//tr")
         save_solved_list(tr[1:])
-        prob = extract_problem(tr[1])
-        await boj.async_pick(prob['pid'])
+        if len(tr[1:]) == 0:
+            print("[!] List is empty")
+            return
+        if listing:
+            for t in tr[1:]:
+                prob = extract_problem(t)
+                print("[{:5d}] {}".format(prob['pid'], prob['title']))
+        else:
+            prob = extract_problem(tr[1])
+            await boj.async_pick(prob['pid'])
     finally:
         await _http.close_solved()

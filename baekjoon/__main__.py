@@ -40,9 +40,17 @@ def main():
     _info.add_argument('-l', '--level', action='store_true', help="Show problem level")
     _info.set_defaults(func=boj.problem_info)
 
+    _class = subparsers.add_parser('class', aliases=['c'], help="Pick a problem of classes", allow_abbrev=True)
+    _class.add_argument('level',  metavar="class level (default number=1)", action='store', type=int, help="Pick a problem from solved.ac class")
+    _class.add_argument('-e', '--essential', action='store_true', help="Essential problems only")
+    _class.add_argument('-a', '--all', action='store_true', help="All problems including solved")
+    _class.add_argument('-l', '--list', action='store_true', help="List title of problems")
+    _class.set_defaults(func=solved.pick_class)
+
     _random = subparsers.add_parser('random', aliases=['r'], help="Pick a random problem from solved.ac", allow_abbrev=True)
     _random.add_argument('level_start',  metavar="level_start (default number=5)", action='store', help="Start of problem level (b, s, g, p, d, r, g5, g4, ...)")
     _random.add_argument('level_end',  metavar="level_end (default number=1)", nargs='?', action='store', help="End of problem level (b, s, g, p, d, r, g3, g2, g1, ...)")
+    _random.add_argument('-l', '--list', action='store_true', help="List title of problems")
     _random.set_defaults(func=solved.pick_random)
 
     args = parser.parse_args()

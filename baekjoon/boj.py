@@ -38,7 +38,7 @@ def save_problem_cache(prob):
 async def async_pick(pid, force=False, silent=False):
     url = BOJ_HOST + '/problem/' + str(pid)
     if not silent:
-        print("[+] Pick", url)
+        print("[+] URL:", url)
     if not force:
         prob = get_cached_problem(pid)
     else:
