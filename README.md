@@ -60,7 +60,7 @@ boj g
 [샘플 config.toml](https://github.com/zshchun/bojtools/blob/main/config.toml.example) 참조
 
 # TODO
-- [ ] Solved.ac classes
+- [x] Solved.ac classes
 - [x] Random pick from Solved.ac
 - [ ] Baekjoon workbook
 - [x] Compile and test
