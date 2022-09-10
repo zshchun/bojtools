@@ -7,7 +7,7 @@ from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 def main():
-    parser = ArgumentParser(prog=argv[0], description="BOJ CLI tool")
+    parser = ArgumentParser(prog=argv[0], description="Baekjoon Online Judge & solved.ac CLI tool")
     parser.add_argument('--version', help="version", action='version', version='%(prog)s ' + __version__)
     subparsers = parser.add_subparsers(title='commands', dest='command')
     commands = {}

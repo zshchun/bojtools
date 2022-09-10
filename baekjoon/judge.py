@@ -5,6 +5,7 @@ from .util import *
 from time import time
 from os import unlink, path
 import asyncio
+import subprocess
 
 def find_input_files(_dir):
     ins = [_dir + sep + f for f in sorted(listdir(_dir)) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
@@ -50,7 +51,8 @@ def test(args):
         start_time = time()
         inputs = open(in_file, "rb").read()
         try:
-            outputs = subprocess.check_output([run_path], input=inputs, stderr=subprocess.STDOUT, timeout=5)
+            proc = subprocess.run([run_path], input=inputs, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=5)
+            outputs = proc.stdout
             expected_outputs = open(output_file, "rb").read()
             same = True
             end_time = time()
@@ -62,7 +64,7 @@ def test(args):
             b += [''] * (max_length - len(b))
             for o1, o2 in zip(a, b):
                 if o1.strip() == o2.strip():
-                    report += ' ' + o1 + '\n'
+                    report += o1.ljust(20, ' ') * 2 + '\n'
                     continue
                 else:
                     same = False
@@ -77,13 +79,10 @@ def test(args):
                 print(inputs.decode())
                 print(WHITE("======= OUT #{:d} =======".format(idx)))
                 print(report)
-        except subprocess.CalledProcessError as e:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
             print(RED("Failed #{}".format(idx)))
-            if outputs: print(outputs.decode())
-            print(GRAY(str(e)))
-        except subprocess.TimeoutExpired as e:
-            print(RED("Failed #{}".format(idx)))
-            print(GRAY(str(e)))
+            if err.stdout: print(e.stdout.decode())
+            print(GRAY(str(err)))
     total = len(input_files)
     ac_text = "[{}/{}]".format(ac, total)
     if total == 0:
