@@ -2,6 +2,7 @@ from . import _http
 from . import config
 from .ui import *
 from .util import *
+from time import time
 from os import unlink, path
 import asyncio
 
@@ -46,11 +47,13 @@ def test(args):
         output_file = d + sep + 'ans' + f[2:]
         if not path.isfile(output_file):
             continue
+        start_time = time()
         inputs = open(in_file, "rb").read()
         try:
             outputs = subprocess.check_output([run_path], input=inputs, stderr=subprocess.STDOUT, timeout=5)
             expected_outputs = open(output_file, "rb").read()
             same = True
+            end_time = time()
             report = ''
             a = outputs.decode().splitlines()
             b = expected_outputs.decode().splitlines()
@@ -67,9 +70,9 @@ def test(args):
                     report += GREEN(o2.ljust(20, ' ')) + '\n'
             if same:
                 ac += 1
-                print(GREEN("Passed #{}".format(idx)))
+                print(GREEN("Passed #"+str(idx)), GRAY("... {:.3f}s".format(end_time-start_time)))
             else:
-                print(RED("Failed #{}".format(idx)))
+                print(RED("Failed #"+str(idx)), GRAY("... {:.3f}s".format(end_time-start_time)))
                 print(WHITE("=======  IN #{:d} =======".format(idx)))
                 print(inputs.decode())
                 print(WHITE("======= OUT #{:d} =======".format(idx)))
@@ -79,8 +82,7 @@ def test(args):
             if outputs: print(outputs.decode())
             print(GRAY(str(e)))
         except subprocess.TimeoutExpired as e:
-            print(RED("Failed #{}".format(idx, e.returncode)))
-            if outputs: print(outputs.decode())
+            print(RED("Failed #{}".format(idx)))
             print(GRAY(str(e)))
     total = len(input_files)
     ac_text = "[{}/{}]".format(ac, total)
