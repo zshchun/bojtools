@@ -5,11 +5,14 @@ from .constants import *
 from lxml import etree, html
 import sqlite3
 import asyncio
+import json
 
 levels = ('b', 's', 'g', 'p', 'd', 'r')
 level_nums = ('5', '4', '3', '2', '1')
+level_classes = ( 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ruby' )
+level_roman = ( 'V', 'IV', 'III', 'II', 'I' )
 
-def extract_problem(tr):
+def extract_problem_from_html(tr):
     td = tr.xpath('.//td')
     prob = {}
     prob['level'] = td[0].xpath('.//img[@alt]')[0].get('alt')
@@ -18,6 +21,21 @@ def extract_problem(tr):
     prob['solved_count'] = int(td[2].xpath('.//div')[0].text.replace(',',''))
     prob['avg_try'] = float(td[3].xpath('.//div')[0].text)
     return prob
+
+def extract_problem(item):
+    prob = {}
+    prob['level'] = lvnum_to_string(item['level'])
+    prob['title'] = item['titleKo']
+    prob['pid'] = int(item['problemId'])
+    prob['solved_count'] = item['acceptedUserCount']
+    prob['avg_try'] = item['averageTries']
+    return prob
+
+def lvnum_to_string(lv):
+    if type(lv) == type(str()):
+        lv = int(lv)
+    level_name = level_classes[(lv-1)//5] + " " + level_roman[(lv-1)%5]
+    return level_name
 
 def pick_random(args):
     lv_start = str(args.level_start)[:2]
@@ -55,10 +73,9 @@ def pick_class(args):
         url = '{}/search?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
     asyncio.run(async_query_solvedac(url, args.list))
 
-def save_solved_list(tr):
+def save_solved_list(probs):
     cur = config.db.cursor()
-    for t in tr:
-        prob = extract_problem(t)
+    for prob in probs:
         cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level) VALUES (?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level']))
     config.db.commit()
 
@@ -75,11 +92,15 @@ def get_problem_level(pid):
 async def async_get_problem_level(pid):
     await _http.open_solved()
     try:
-        url = SOLVED_HOST + '/search?query=' + str(pid)
+        url = SOLVED_HOST + '/search?query=id:' + str(pid)
         resp = await _http.async_get(url)
         doc = html.fromstring(resp)
-        tr = doc.xpath(".//table[@style='min-width:800px' and @class]//tr")
-        save_solved_list(tr[1:])
+        page = json.loads(doc.xpath(".//script[@id='__NEXT_DATA__' and @type='application/json']")[0].text)
+        items = page['props']['pageProps']['problems']['items']
+        probs = []
+        for i in items:
+            probs += [extract_problem(i)]
+        save_solved_list(probs)
         return get_cached_level(pid)
     finally:
         await _http.close_solved()
@@ -89,17 +110,23 @@ async def async_query_solvedac(url, listing=False):
     try:
         resp = await _http.async_get(url)
         doc = html.fromstring(resp)
-        tr = doc.xpath(".//table[@style='min-width:800px' and @class]//tr")
-        save_solved_list(tr[1:])
-        if len(tr[1:]) == 0:
+        page = json.loads(doc.xpath(".//script[@id='__NEXT_DATA__' and @type='application/json']")[0].text)
+        items = page['props']['pageProps']['problems']['items']
+        probs = []
+        for i in items:
+            probs += [extract_problem(i)]
+#        tr = doc.xpath(".//table[@style='min-width:800px' and @class]//tr")
+#        probs = []
+#        for t in tr[1:]:
+#            probs += [extract_problem_from_html(t)]
+        if len(probs) == 0:
             print("[!] List is empty")
             return
+        save_solved_list(probs)
         if listing:
-            for t in tr[1:]:
-                prob = extract_problem(t)
+            for prob in probs:
                 print("[{:5d}] {}".format(prob['pid'], prob['title']))
         else:
-            prob = extract_problem(tr[1])
-            await boj.async_pick(prob['pid'])
+            await boj.async_pick(probs[0]['pid'])
     finally:
         await _http.close_solved()

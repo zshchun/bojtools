@@ -141,8 +141,7 @@ def problem_info(args):
         sinfo = solved.get_cached_level(pid)
         if not sinfo:
             sinfo = solved.get_problem_level(pid)
-        if sinfo and sinfo['level'] != 'Hidden':
-            level_info = "(" + sinfo['level'] + ")"
+        level_info = "(" + sinfo['level'] + ")"
 
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))
