@@ -11,8 +11,8 @@ def get_tag_text(tags):
     return ret.strip()
 
 def wrap_html_text(s):
-    text = html.fromstring(s).itertext()
-    text = text_wrap('\n'.join(text), config.conf['text_width'])
+    text = html.fromstring(s).text_content().replace('\n\t', '\n ')
+    text = text_wrap(text, config.conf['text_width'])
     return text
 
 def guess_pid(args):
