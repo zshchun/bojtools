@@ -33,8 +33,8 @@ def test(args):
         filename = args.input
     else:
         filename = select_source_code(pid)
-    if not path.isfile(filename):
-        print("[!] File not found : {}".format(filename))
+    if not filename or not path.isfile(filename):
+        print("[!] File not found".format(filename))
         return
     run_path = path.splitext(filename)[0]
     input_files = find_input_files(prob_dir)

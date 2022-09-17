@@ -2,7 +2,7 @@ from . import boj
 from . import solved
 from . import judge
 from . import submit
-from . import __version__
+from . import  __version__
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 

@@ -9,6 +9,7 @@ import json
 default_headers = {
     'Accept': '*/*',
     'Accept-Encoding': 'gzip',
+    'User-Agent': config.conf['user_agent'],
     }
 
 solved_jar = None

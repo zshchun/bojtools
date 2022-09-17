@@ -44,7 +44,6 @@ def select_source_code(pid):
     prob_path = prepare_problem_dir(pid)
     files = find_source_files(prob_path)
     if len(files) == 0:
-        print("[!] File not found")
         return None
     elif len(files) >= 2:
         print("[!] There are multiple solutions")

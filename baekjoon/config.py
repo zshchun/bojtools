@@ -1,6 +1,7 @@
 import tomli
 import sqlite3
 from os import makedirs, path, environ
+from . import __version__
 
 DEFAULT_CONFIG = {
     'cache_dir': '~/boj/cache',
@@ -8,6 +9,7 @@ DEFAULT_CONFIG = {
     'database': '~/.boj/cache.db',
     'template': '~/.boj/template.cpp',
     'open_in_browser': True,
+    'user_agent': 'bojtools/' + __version__,
     'browser': 'google-chrome',
     'pager': 'less',
     'code_open': 'open',
@@ -62,3 +64,6 @@ def load_config():
         db.commit()
     else:
         db = sqlite3.connect(db_path)
+
+if not conf:
+    load_config()
