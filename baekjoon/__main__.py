@@ -51,6 +51,7 @@ def main():
     _random.add_argument('level_start',  metavar="level_start (default number=5)", action='store', help="Start of problem level (b, s, g, p, d, r, g5, g4, ...)")
     _random.add_argument('level_end',  metavar="level_end (default number=1)", nargs='?', action='store', help="End of problem level (b, s, g, p, d, r, g3, g2, g1, ...)")
     _random.add_argument('-l', '--list', action='store_true', help="List title of problems")
+    _random.add_argument('-s', '--solved_count', action='store', type=int, help="Number of people solved")
     _random.set_defaults(func=solved.pick_random)
 
     args = parser.parse_args()

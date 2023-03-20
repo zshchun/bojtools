@@ -3,6 +3,7 @@ from . import _http
 from . import config
 from .constants import *
 from lxml import etree, html
+from urllib import parse
 import sqlite3
 import asyncio
 import json
@@ -55,7 +56,11 @@ def pick_random(args):
     lv_range = "{}..{}".format(lv_start, lv_end)
     print('[+] Random pick', lv_range)
     page = 1
-    url = '{}/search?query=*{}~@$me&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, lv_range, page)
+    query = '*{} ~@$me'.format(lv_range)
+    if 'solved_count' in args and args.solved_count:
+        query += ' s#{}..'.format(args.solved_count)
+    query = parse.quote_plus(query)
+    url = '{}/search?query={}&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, query, page)
     asyncio.run(async_query_solvedac(url, args.list))
 
 def pick_class(args):
