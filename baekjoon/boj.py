@@ -1,3 +1,4 @@
+import os
 import json
 import base64
 import asyncio
@@ -22,6 +23,8 @@ def pick(args, silent=False):
     else:
         force = False
     prob = asyncio.run(async_pick(pid, force=force, silent=silent))
+    if config.conf['auto_generate']:
+        generate_code(args)
 
 def get_cached_problem(pid):
     cur = config.db.cursor()
@@ -34,6 +37,28 @@ def save_problem_cache(prob):
     cur = config.db.cursor()
     cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples']), False))
     config.db.commit()
+
+def generate_code(args):
+    pid = guess_pid(args)
+    if not pid:
+        print("[!] Invalid problem ID")
+        return
+    template_path = path.expanduser(config.conf['template'])
+    if not path.isfile(template_path):
+        print("[!] Template file not found")
+        return
+    prob_dir = prepare_problem_dir(pid)
+    ext = path.splitext(template_path)[-1]
+    assert ext != "", "[!] File extension not found"
+    new_path = prob_dir + sep + str(pid) + ext
+    if path.exists(new_path):
+        print("[!] File exists:", new_path)
+        return
+    inf = open(template_path, 'r')
+    outf = open(new_path, 'w')
+    for line in inf:
+        outf.write(line)
+    print(GREEN('[+] Generate {}'.format(new_path)))
 
 async def async_pick(pid, force=False, silent=False):
     url = BOJ_HOST + '/problem/' + str(pid)

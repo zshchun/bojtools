@@ -33,7 +33,7 @@ def main():
 
     _generate = subparsers.add_parser('generate', aliases=['g'], help="Generate source code from template")
     _generate.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
-    _generate.set_defaults(func=judge.generate_code)
+    _generate.set_defaults(func=boj.generate_code)
 
     _info = subparsers.add_parser('info', aliases=['i'], help="Show problem info")
     _info.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)

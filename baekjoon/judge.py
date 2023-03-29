@@ -23,6 +23,7 @@ def compile_code(src_path, run_path):
         exit(1)
 
 def test(args):
+    args.print_help()
     pid = guess_pid(args)
     if not pid:
         print("[!] Invalid problem ID")
@@ -94,25 +95,3 @@ def test(args):
     else:
         print(ac_text, RED("Wrong Answer"))
     unlink(run_path)
-
-def generate_code(args):
-    pid = guess_pid(args)
-    if not pid:
-        print("[!] Invalid problem ID")
-        return
-    template_path = path.expanduser(config.conf['template'])
-    if not path.isfile(template_path):
-        print("[!] Template file not found")
-        return
-    prob_dir = prepare_problem_dir(pid)
-    ext = path.splitext(template_path)[-1]
-    assert ext != "", "[!] File extension not found"
-    new_path = prob_dir + sep + str(pid) + ext
-    if path.exists(new_path):
-        print("[!] File exists:", new_path)
-        return
-    inf = open(template_path, 'r')
-    outf = open(new_path, 'w')
-    for line in inf:
-        outf.write(line)
-    print(GREEN('[+] Generate {}'.format(new_path)))
