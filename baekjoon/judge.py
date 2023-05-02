@@ -23,7 +23,6 @@ def compile_code(src_path, run_path):
         exit(1)
 
 def test(args):
-    args.print_help()
     pid = guess_pid(args)
     if not pid:
         print("[!] Invalid problem ID")
