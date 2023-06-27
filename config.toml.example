@@ -4,7 +4,6 @@ template = "~/.boj/template.cpp"
 open_in_browser = true
 browser = "google-chrome"
 pager = "less"
-lang_id = 84
 tab_width = 4
 text_with = 70
 auto_generate = true
@@ -17,8 +16,10 @@ solved_token = ""
 compile = ["g++", "-std=c++11", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"]
 cmd = ["./%PROB_NUM%"]
 ext = "cpp"
+lang_id = "C++17"
 
 [[lang]]
 compile = []
 cmd = ["python3", "%SOURCE%"]
 ext = "py"
+lang_id = "Python 3"

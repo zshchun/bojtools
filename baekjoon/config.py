@@ -16,28 +16,27 @@ DEFAULT_CONFIG = {
     'tab_width': 4,
     'auto_generate': True,
     'text_width': 70,
-    'lang_id': 84,
     'boj_token': '',
     'solved_token': '',
     'lang': [
-        {'ext': "cpp", 'cmd': ["./%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"]},
-        {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [] },
+        {'ext': "cpp", 'cmd': ["./%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
+        {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
     ],
     }
 
 lang_ids = {
-    84: "C++17",
-    0: "C99",
-    28: "Python 3",
-    88: "C++14",
-    73: "PyPy3",
-    49: "C++11",
-    85: "C++17 (Clang)",
-    1001: "C++",
-    1002: "Java",
-    1003: "Python",
-    1004: "C",
-    1005: "Rust",
+    "C++17": 84,
+    "C99": 0,
+    "Python 3": 28,
+    "C++14": 88,
+    "PyPy3": 73,
+    "C++11": 49,
+    "C++17 (Clang)": 85,
+    "C++": 1001,
+    "Java": 1002,
+    "Python": 1003,
+    "C": 1004,
+    "Rust": 1005,
 }
 
 base_dir = environ["HOME"] + "/.boj"

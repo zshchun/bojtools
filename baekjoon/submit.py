@@ -20,15 +20,24 @@ async def async_submit(args):
     else:
         filename = select_source_code(pid)
 
+    ext = path.splitext(filename)[1].lstrip('.')
+    lang = [x['lang_id'] for x in config.conf['lang'] if x['ext'] == ext]
+    if not lang or not lang[0] in config.lang_ids:
+        print("[!] Unknown file extension")
+        return
+
+    lang_id = config.lang_ids[lang[0]]
+
     submit_form = {
         'problem_id': str(pid),
-        'language': str(config.conf['lang_id']),
+        'language': str(lang_id),
         'code_open': config.conf['code_open'],
     }
+
     if not path.isfile(filename):
         print("[!] File not found : {}".format(filename))
         return
-    print(GREEN("[+] Submit {}".format(filename)))
+    print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
     await _http.open_boj()
     try:
         url = 'https://www.acmicpc.net/submit/' + str(pid)
