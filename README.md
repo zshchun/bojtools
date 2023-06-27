@@ -68,4 +68,5 @@ boj g
 - [ ] Extract cookies
 - [x] Text width
 - [x] View other solution
+- [x] Support python
 - [ ] Support multi-platform

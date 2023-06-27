@@ -14,9 +14,11 @@ bojautologin = ""
 solved_token = ""
 
 [[lang]]
-cmd = "gcc -O2"
+compile = ["g++", "-std=c++11", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"]
+cmd = ["./%PROB_NUM%"]
 ext = "cpp"
 
 [[lang]]
-cmd = "python3"
+compile = []
+cmd = ["python3", "%SOURCE%"]
 ext = "py"

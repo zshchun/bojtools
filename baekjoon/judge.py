@@ -11,9 +11,8 @@ def find_input_files(_dir):
     ins = [_dir + sep + f for f in sorted(listdir(_dir)) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
     return ins
 
-def compile_code(src_path, run_path):
-    print("[+] Compile {}".format(src_path))
-    proc = subprocess.run(["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", run_path, src_path], capture_output=True)
+def compile_code(args):
+    proc = subprocess.run(args, capture_output=True)
     if proc.returncode != 0:
         if proc.stdout:
             print(proc.stdout.decode())
@@ -36,9 +35,29 @@ def test(args):
     if not filename or not path.isfile(filename):
         print("[!] File not found".format(filename))
         return
-    run_path = path.splitext(filename)[0]
+    run_path, ext = path.splitext(filename)
+    ext = ext.lstrip('.')
     input_files = find_input_files(prob_dir)
-    compile_code(filename, run_path)
+
+    cmd = [x for x in config.conf['lang'] if x['ext'] == ext]
+    if not cmd:
+        print("[!] Unsupported langugage, add your configuration")
+        return
+    cmd = cmd[0]
+
+    if 'compile' in cmd and cmd['compile']:
+        compile_args = []
+        for s in cmd['compile']:
+            s = s.replace("%PROB_NUM%", run_path).replace("%SOURCE%", filename)
+            compile_args.append(s)
+        print("[+] Compile {}".format(filename))
+        compile_code(compile_args)
+
+    exec_args = []
+    for s in cmd['cmd']:
+        s = s.replace("%PROB_NUM%", run_path).replace("%SOURCE%", filename)
+        exec_args.append(s)
+
     ac = 0
     idx = 0
     for in_file in input_files:
@@ -51,7 +70,7 @@ def test(args):
         start_time = time()
         inputs = open(in_file, "rb").read()
         try:
-            proc = subprocess.run([run_path], input=inputs, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=5)
+            proc = subprocess.run(exec_args, input=inputs, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=5)
             outputs = proc.stdout
             expected_outputs = open(output_file, "rb").read()
             same = True
@@ -93,4 +112,5 @@ def test(args):
         print(ac_text, GREEN("Accepted"))
     else:
         print(ac_text, RED("Wrong Answer"))
-    unlink(run_path)
+    if 'compile' in cmd and cmd['compile']:
+        unlink(run_path)
