@@ -30,12 +30,12 @@ def get_cached_problem(pid):
     cur = config.db.cursor()
     q = cur.execute(f'''SELECT title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted FROM boj WHERE pid = {pid};''').fetchone()
     if not q: return []
-    prob = { 'pid':pid, 'title':q[0], 'info':json.loads(q[1]), 'desc':q[2], 'input':q[3], 'output':q[4], 'constraints':q[5], 'hint':q[6], 'lang':q[7], 'spoiler':q[8], 'samples':json.loads(q[9]), 'accepted':q[10] }
+    prob = { 'pid':pid, 'title':q[0], 'info':json.loads(q[1]), 'desc':q[2], 'input':q[3], 'output':q[4], 'constraints':q[5], 'hint':q[6], 'lang':q[7], 'spoiler':q[8], 'samples':json.loads(q[9]), 'solved':q[10] }
     return prob
 
 def save_problem_cache(prob):
     cur = config.db.cursor()
-    cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples']), False))
+    cur.execute('INSERT or REPLACE INTO boj (pid, title, info, desc, input, output, constraints, hint, lang, spoiler, samples, accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (prob['pid'], prob['title'], json.dumps(prob['info']), prob['desc'], prob['input'], prob['output'], prob['constraints'], prob['hint'], prob['lang'], prob['spoiler'], json.dumps(prob['samples']), prob['solved']))
     config.db.commit()
 
 def generate_code(args):
@@ -79,6 +79,11 @@ async def async_pick(pid, force=False, silent=False):
         table = doc.xpath('.//table[@id="problem-info"]')[0]
         prob = {'pid':pid}
         prob['title'] = doc.xpath('.//h1/span[@id="problem_title"]')[0].text
+        prob['solved'] = STATUS_NONE
+        if doc.xpath('.//span[@class="problem-label problem-label-ac"]'):
+            prob['solved'] = STATUS_AC
+        elif doc.xpath('.//span[@class="problem-label problem-label-wa"]'):
+            prob['solved'] = STATUS_WA
         prob['info'] = {k.text.strip():v.text.strip() for k, v in zip(table.xpath('.//th'), table.xpath('.//td'))}
         prob['desc'] = get_tag_text(doc.xpath('.//div[@id="problem_description"]'))
         prob['input'] = get_tag_text(doc.xpath('.//div[@id="problem_input"]'))
@@ -109,13 +114,18 @@ async def async_pick(pid, force=False, silent=False):
 def show_problem(prob):
     print(unicode_format("\n|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
     print(unicode_format("|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].values()))
-    print(BWHITE("\n[{}] {}\n".format(prob['pid'], prob['title'])))
+    status = ''
+    if prob['solved'] == STATUS_AC:
+        status = GREEN("AC")
+    elif prob['solved'] == STATUS_WA:
+        status = RED("WA")
+    print(BWHITE("\n[{}] {} {}\n".format(prob['pid'], prob['title'], status)))
     text_width = config.conf['text_width']
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))
         for lang in multi_lang:
             print("=" * text_width)
-            print(BWHITE("[+] {} : {}".format(lang['problem_lang_tcode'], lang['title'])))
+            print(BWHITE("[+] {} : {} {}".format(lang['problem_lang_tcode'], lang['title'], status)))
             desc_text = wrap_html_text(lang['description'])
             print(desc_text)
             print(GREEN("\nInput:"))
@@ -160,6 +170,11 @@ def problem_info(args):
     if not prob:
         pick(args, silent=True)
         prob = get_cached_problem(pid)
+    if 'solved' in prob:
+        if prob['solved'] == STATUS_AC:
+            print("[+] Status : Accepted")
+        elif prob['solved'] == STATUS_WA:
+            print("[+] Status : Wrong answer")
 
     level_info = ""
     if 'level' in args and args.level:
@@ -249,9 +264,11 @@ async def async_view_solutions(args):
     finally:
         await _http.close_boj()
 
-def set_problem_accepted(pid):
+def set_problem_status(pid, status):
     if not pid:
         return
+    if status != STATUS_NONE and status != STATUS_AC and status != STATUS_WA:
+        return
     cur = config.db.cursor()
-    q = cur.execute(f'''UPDATE boj SET accepted = 1 WHERE pid = {pid};''')
+    q = cur.execute(f'''UPDATE boj SET accepted = {status} WHERE pid = {pid};''')
     config.db.commit()

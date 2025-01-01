@@ -128,8 +128,9 @@ async def websockets(url, callback, pid=None, sid=None):
                     data = json.loads(js['data'])
                     await callback(data)
                     if data['result'] == 4:
-                        boj.set_problem_accepted(pid)
+                        boj.set_problem_accepted(pid, STATUS_AC)
                     if data['result'] > 3:
+                        boj.set_problem_accepted(pid, STATUS_WA)
                         break
                 elif js['event'] == 'pusher_internal:subscription_succeeded':
                     continue
