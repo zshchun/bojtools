@@ -5,6 +5,7 @@ from os import path
 import asyncio
 import aiohttp
 import json
+import time
 
 default_headers = {
     'Accept': '*/*',
@@ -18,20 +19,26 @@ cookie_jar = {}
 cookies = {}
 boj_session = None
 solved_session = None
+prev_req_time = None
+req_delay = 0.020
 
 def add_header(newhdr, headers=default_headers):
     headers.update(newhdr)
     return headers
 
 def get(url, headers=None):
+    global prev_req_time
     resp = asyncio.run(async_get(url, headers))
+    prev_req_time = time.time()
     if resp:
         return resp[0]
     else:
         return None
 
 def post(url, data, headers=None):
+    global prev_req_time
     resp = asyncio.run(async_post(url, data, headers))
+    prev_req_time = time.time()
     if resp:
         return resp[0]
     else:
@@ -43,6 +50,12 @@ def GET(url, headers=None):
 def POST(url, data, headers=None):
     return {'method':async_post, 'url':url, 'data':data, 'headers':headers}
 
+def wait_req_delay():
+    if not prev_req_time:
+        return
+    if time.time() < prev_req_time + req_delay:
+        time.sleep(prev_req_time + req_delay - time.time())
+
 async def async_get(url, headers=None):
     if headers == None: headers = default_headers
     if url.startswith(BOJ_HOST):
@@ -53,6 +66,7 @@ async def async_get(url, headers=None):
         print("[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST))
         return None
     result = None
+    wait_req_delay()
     async with session.get(url, headers=headers) as response:
         return await response.text()
 
