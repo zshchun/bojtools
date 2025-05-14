@@ -20,7 +20,7 @@ cookies = {}
 boj_session = None
 solved_session = None
 prev_req_time = None
-req_delay = 0.020
+req_delay = 0.100
 
 def add_header(newhdr, headers=default_headers):
     headers.update(newhdr)
