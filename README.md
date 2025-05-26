@@ -7,6 +7,11 @@ pip3 install bojtools
 ```
 
 # 사용법
+## 로그인
+```sh
+boj login
+```
+
 ## 문제 선택
 ```sh
 boj pick <번호>
@@ -59,9 +64,16 @@ boj g
 
 [샘플 config.toml](https://github.com/zshchun/bojtools/blob/main/config.toml.example) 참조
 
+# playwright 설치
+```
+pip install playwright
+playwright install
+```
+
 # TODO
 - [x] Solved.ac classes
 - [x] Random pick from Solved.ac
+- [x] Log in to Baekjoon and Solved.ac
 - [ ] Baekjoon workbook
 - [x] Compile and test
 - [x] Submit a code
@@ -70,3 +82,4 @@ boj g
 - [x] View other solution
 - [x] Support python
 - [ ] Support multi-platform
+- [ ] Improve guide documents

@@ -1,3 +1,4 @@
+import json
 import tomli
 import sqlite3
 from os import makedirs, path, environ
@@ -18,6 +19,7 @@ DEFAULT_CONFIG = {
     'text_width': 70,
     'boj_token': '',
     'solved_token': '',
+    'cookie_path': '~/.boj/cookie.json',
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
@@ -41,11 +43,10 @@ lang_ids = {
 
 base_dir = environ["HOME"] + "/.boj"
 config_path = base_dir + "/config.toml"
-cookies_path = base_dir + "/cookies"
 conf = {}
 
 def load_config():
-    global conf, db
+    global conf, db, cookie, cookie_path
     if path.isfile(config_path):
         conf = tomli.load(open(config_path, "rb"))
     for k, v in DEFAULT_CONFIG.items():
@@ -54,6 +55,10 @@ def load_config():
     for d in [base_dir, conf['cache_dir'], conf['code_dir']]:
         if not path.isdir(path.expanduser(d)):
             makedirs(path.expanduser(d))
+    cookie_path = path.expanduser(conf['cookie_path'])
+    if path.isfile(cookie_path):
+        with open(cookie_path, 'r') as f:
+            cookie = json.load(f)
 
     db_path = path.expanduser(conf['database'])
     if not path.isfile(db_path):

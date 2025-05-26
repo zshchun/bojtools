@@ -1,4 +1,5 @@
 from . import boj
+from . import login
 from . import solved
 from . import judge
 from . import submit
@@ -11,6 +12,9 @@ def main():
     parser.add_argument('--version', help="version", action='version', version='%(prog)s ' + __version__)
     subparsers = parser.add_subparsers(title='commands', dest='command')
     commands = {}
+
+    _login = subparsers.add_parser('login', aliases=['l'], help="Log in to baekjoon and solved.ac", allow_abbrev=True)
+    _login.set_defaults(func=login.start)
 
     _pick = subparsers.add_parser('pick', aliases=['p'], help="Pick a problem", allow_abbrev=True)
     _pick.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)
