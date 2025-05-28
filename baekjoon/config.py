@@ -11,7 +11,6 @@ DEFAULT_CONFIG = {
     'template': '~/.boj/template.cpp',
     'open_in_browser': True,
     'user_agent': 'bojtools/' + __version__,
-    'browser': 'google-chrome',
     'pager': 'less',
     'code_open': 'open',
     'tab_width': 4,
@@ -19,7 +18,8 @@ DEFAULT_CONFIG = {
     'text_width': 70,
     'boj_token': '',
     'solved_token': '',
-    'cookie_path': '~/.boj/cookie.json',
+    'state_path': '~/.boj/state.json',
+    'browser_path': '~/.boj/browser.json',
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
@@ -45,8 +45,10 @@ base_dir = environ["HOME"] + "/.boj"
 config_path = base_dir + "/config.toml"
 conf = {}
 
+
 def load_config():
-    global conf, db, cookie, cookie_path
+    global conf, db, state, state_path
+    global browser, browser_path
     if path.isfile(config_path):
         conf = tomli.load(open(config_path, "rb"))
     for k, v in DEFAULT_CONFIG.items():
@@ -55,10 +57,16 @@ def load_config():
     for d in [base_dir, conf['cache_dir'], conf['code_dir']]:
         if not path.isdir(path.expanduser(d)):
             makedirs(path.expanduser(d))
-    cookie_path = path.expanduser(conf['cookie_path'])
-    if path.isfile(cookie_path):
-        with open(cookie_path, 'r') as f:
-            cookie = json.load(f)
+    state_path = path.expanduser(conf['state_path'])
+    if path.isfile(state_path) and path.getsize(state_path) > 0:
+        with open(state_path, 'r') as f:
+            state = json.load(f)
+    browser_path = path.expanduser(conf['browser_path'])
+    if path.isfile(browser_path) and path.getsize(browser_path) > 0:
+        with open(browser_path, 'r') as f:
+            browser = json.load(f)
+            if 'user_agent' in browser:
+                conf['user_agent'] = browser['user_agent']
 
     db_path = path.expanduser(conf['database'])
     if not path.isfile(db_path):

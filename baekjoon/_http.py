@@ -1,6 +1,8 @@
 from . import config
 from . import boj
 from .constants import *
+from http.cookies import Morsel
+from datetime import datetime, timezone
 from os import path
 import asyncio
 import aiohttp
@@ -13,14 +15,12 @@ default_headers = {
     'User-Agent': config.conf['user_agent'],
     }
 
-solved_jar = None
 tokens = {}
-cookie_jar = {}
-cookies = {}
 boj_session = None
 solved_session = None
 prev_req_time = None
 req_delay = 0.150
+cookie_jar = None
 
 def add_header(newhdr, headers=default_headers):
     headers.update(newhdr)
@@ -96,35 +96,50 @@ async def async_urlsopen(urls):
             tasks += [async_post(u['url'], u['data'], u['headers'])]
     return await asyncio.gather(*tasks)
 
-def load_jar(path):
-    jar = aiohttp.CookieJar()
-    if path.isfile(jar_path):
-        jar.load(file_path=jar_path)
-    else:
-        jar.save(file_path=jar_path)
-    return jar
+
+async def set_cookie():
+    global cookie_jar
+    cookie_jar = aiohttp.CookieJar()
+    if not 'cookies' in config.state:
+        return
+    for c in config.state['cookies']:
+        morsel = Morsel()
+        morsel.set(c['name'], c['value'], c['value'])
+        morsel['path'] = c['path']
+        morsel['domain'] = c['domain']
+        if 'expires' in c:
+            t = datetime.fromtimestamp(c['expires'], tz=timezone.utc)
+            morsel['expires'] = t.strftime("%a, %d %b %Y %H:%M:%S GMT")
+        if 'secure' in c:
+            morsel['secure'] = c['secure']
+        if 'httpOnly' in c:
+            morsel['httponly'] = c['httpOnly']
+        if 'sameSite' in c and c['sameSite']:
+            morsel['samesite'] = c['sameSite']
+        cookie_jar.update_cookies({morsel.key : morsel})
+
 
 async def open_boj():
-    global boj_session, boj_jar
-    if config.conf['boj_token']:
-        boj_cookies = {"bojautologin":config.conf['boj_token']}
+    global boj_session, cookie_jar
+    if cookie_jar == None:
+        await set_cookie()
     if boj_session == None:
-        boj_session = await aiohttp.ClientSession(cookies=boj_cookies).__aenter__()
+        boj_session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
 
 async def open_solved():
-    global solved_session, solved_jar
-    if config.conf['solved_token']:
-        solved_cookies = {"solvedacToken":config.conf['solved_token']}
+    global solved_session, cookie_jar
+    if cookie_jar == None:
+        await set_cookie()
     if solved_session == None:
-        solved_session = await aiohttp.ClientSession(cookies=solved_cookies).__aenter__()
+        solved_session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
 
 async def close_boj():
-    global boj_session, boj_jar
+    global boj_session
     await boj_session.__aexit__(None, None, None)
     boj_session = None
 
 async def close_solved():
-    global solved_session, solved_jar
+    global solved_session
     await solved_session.__aexit__(None, None, None)
     solved_session = None
 
