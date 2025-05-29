@@ -83,3 +83,4 @@ playwright install
 - [x] Support python
 - [ ] Support multi-platform
 - [ ] Improve guide documents
+- [ ] Github action

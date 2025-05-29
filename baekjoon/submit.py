@@ -4,6 +4,7 @@ from .ui import *
 from .util import *
 from lxml import etree, html
 from urllib.parse import quote_plus
+from playwright.async_api import async_playwright
 import asyncio
 import aiohttp
 
@@ -11,6 +12,7 @@ def submit(args):
     return asyncio.run(async_submit(args))
 
 async def async_submit(args):
+    global pid, ext, filename
     pid = guess_pid(args)
     if not pid:
         print("[!] Invalid problem ID")
@@ -27,20 +29,42 @@ async def async_submit(args):
         return
 
     lang_id = config.lang_ids[lang[0]]
+    if not path.isfile(filename):
+        print("[!] File not found : {}".format(filename))
+        return
 
+    url = 'https://www.acmicpc.net/submit/' + str(pid)
     submit_form = {
         'problem_id': str(pid),
         'language': str(lang_id),
         'code_open': config.conf['code_open'],
     }
+    await async_playwright_submit(url, submit_form)
+    #await async_aiohttp_submit(url, submit_form)
 
-    if not path.isfile(filename):
-        print("[!] File not found : {}".format(filename))
-        return
+
+async def async_playwright_submit(url, submit_form):
+    source_code = open(filename, 'r').read()
+    source_code = source_code.replace('\t', ' ' * config.conf['tab_width'])
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context(storage_state=config.state)
+        page = await context.new_page()
+        response = await page.goto(url)
+        print(response.status)
+        if response.headers.get("content-type", "").startswith("application/json"):
+            print(await response.json())
+        else:
+            print(await response.text())
+        await page.fill("div.CodeMirror.cm-s-default div textarea", source_code)
+        await page.click("#submit_button")
+        #await browser.close()
+
+
+async def async_aiohttp_submit(submit_form):
     print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
     await _http.open_boj()
     try:
-        url = 'https://www.acmicpc.net/submit/' + str(pid)
         resp = await _http.async_get(url)
         doc = html.fromstring(resp)
         csrf = doc.xpath('.//input[@type="hidden" and @name="csrf_key"]')[0].get("value")
