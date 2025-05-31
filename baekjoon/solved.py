@@ -7,6 +7,7 @@ from urllib import parse
 import sqlite3
 import asyncio
 import json
+import time
 
 levels = ('b', 's', 'g', 'p', 'd', 'r')
 level_nums = ('5', '4', '3', '2', '1')
@@ -75,12 +76,12 @@ def pick_random(args):
 
     print('[+] Random pick', lv_range)
     page = 1
-    query = '*{} ~@$me'.format(lv_range)
     if 'solved_count' in args and args.solved_count:
-        query += ' s#{}..'.format(args.solved_count)
-    query = parse.quote_plus(query)
+        solved_count = "solvedByGte={}&".format(args.solved_count)
+    #query = parse.quote_plus(query)
     #url = '{}/search?query={}&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, query, page)
-    url = '{}/problems?levelStart={:d}&levelEnd={:d}&state=unsolved&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, lv_start, lv_end, page)
+    url = ('{}/problems?levelStart={:d}&levelEnd={:d}&state=unsolved&sort=random&{}' +
+           't={:d}&direction=asc&page={:d}').format(SOLVED_HOST, lv_start, lv_end, solved_count, int(time.time()*1000), page)
     asyncio.run(async_query_solvedac(url, args.list))
 
 def pick_class(args):

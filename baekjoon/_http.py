@@ -19,7 +19,7 @@ tokens = {}
 boj_session = None
 solved_session = None
 prev_req_time = None
-req_delay = 0.150
+req_delay = 0.100
 cookie_jar = None
 
 def add_header(newhdr, headers=default_headers):
