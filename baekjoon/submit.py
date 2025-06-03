@@ -5,6 +5,7 @@ from .util import *
 from lxml import etree, html
 from urllib.parse import quote_plus
 from playwright.async_api import async_playwright
+import time
 import asyncio
 import aiohttp
 
@@ -21,6 +22,10 @@ async def async_submit(args):
         filename = args.input
     else:
         filename = select_source_code(pid)
+
+    if not filename:
+        print("[!] Failed to select a file : {}".format(filename))
+        return
 
     ext = path.splitext(filename)[1].lstrip('.')
     lang = [x['lang_id'] for x in config.conf['lang'] if x['ext'] == ext]
@@ -51,13 +56,14 @@ async def async_playwright_submit(url, submit_form):
         context = await browser.new_context(storage_state=config.state)
         page = await context.new_page()
         response = await page.goto(url)
-        print(response.status)
-        if response.headers.get("content-type", "").startswith("application/json"):
-            print(await response.json())
-        else:
-            print(await response.text())
+        # print(response.status)
+        # if response.headers.get("content-type", "").startswith("application/json"):
+        #     print(await response.json())
+        # else:
+        #     print(await response.text())
         await page.fill("div.CodeMirror.cm-s-default div textarea", source_code)
-        await page.click("#submit_button")
+        # await page.click("#submit_button")
+        time.sleep(1000)
         #await browser.close()
 
 
