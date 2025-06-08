@@ -4,13 +4,18 @@ from .ui import *
 from .util import *
 from lxml import etree, html
 from urllib.parse import quote_plus
-from playwright.async_api import async_playwright
+import nodriver as uc
 import time
+import random
 import asyncio
 import aiohttp
 
+ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
+
+
 def submit(args):
-    return asyncio.run(async_submit(args))
+    uc.loop().run_until_complete(async_submit(args))
+#    return asyncio.run(async_submit(args))
 
 async def async_submit(args):
     global pid, ext, filename
@@ -22,6 +27,10 @@ async def async_submit(args):
         filename = args.input
     else:
         filename = select_source_code(pid)
+
+    if not filename:
+        print("[!] Failed to select a file : {}".format(filename))
+        return
 
     if not filename:
         print("[!] Failed to select a file : {}".format(filename))
@@ -44,30 +53,92 @@ async def async_submit(args):
         'language': str(lang_id),
         'code_open': config.conf['code_open'],
     }
-    await async_playwright_submit(url, submit_form)
-    #await async_aiohttp_submit(url, submit_form)
+    await async_nodriver_submit(url, submit_form, pid)
+    #await async_aiohttp_submit(url, submit_form, pid)
 
 
-async def async_playwright_submit(url, submit_form):
+async def is_tab_opened(tab):
+    try:
+        isopen = await asyncio.wait_for(tab.evaluate(expression="true"), timeout=0.5)
+        return True
+    except (ConnectionRefusedError, ConnectionError, AttributeError, asyncio.TimeoutError):
+        return False
+
+
+async def async_nodriver_submit(url, submit_form, pid):
+    global _evt
+    _evt = None
     source_code = open(filename, 'r').read()
     source_code = source_code.replace('\t', ' ' * config.conf['tab_width'])
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context(storage_state=config.state)
-        page = await context.new_page()
-        response = await page.goto(url)
-        # print(response.status)
-        # if response.headers.get("content-type", "").startswith("application/json"):
-        #     print(await response.json())
-        # else:
-        #     print(await response.text())
-        await page.fill("div.CodeMirror.cm-s-default div textarea", source_code)
-        # await page.click("#submit_button")
-        time.sleep(1000)
-        #await browser.close()
+    browser = await uc.start(headless=False,
+                             user_data_dir=config.conf['browser_dir'],
+                             browser_executable_path=config.conf['browser'],
+                             browser_args=config.conf['browser_args'],
+                             lang=config.conf['locale'],)
+    tab = browser.main_tab
+    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
+
+    tab = await browser.get(url)
+    await tab.scroll_down(30)
+
+    element = await tab.select("div.CodeMirror.cm-s-default div textarea")
+    source_code = source_code.replace('\n', '\r')
+    await element.send_keys(source_code)
+#    js = "(item) => { item.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); }"
+#    await element.apply(js)
+    #element = await tab.select("#cf-chl-widget-n5woi") # submit, "#submit_form > div:nth-child(7) > div > div"
+    while True:
+        time.sleep(0.25)
+        btn = await tab.select("#submit_button")
+        attr = btn.attributes
+        visible = True
+        for i in range(0, len(attr), 2):
+            if attr[i] == 'style' and attr[i+1] == 'display: none;':
+                visible = False
+                break
+        if visible: break
+
+    await tab.sleep(3)
+    await btn.click()
+    await tab.sleep(5)
+    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
+    html = await tab.get_content()
+#    sids = []
+#    for elem in elems:
+#        attr = elem.attributes
+#        for i in range(0, len(attr), 2):
+#            if attr[i] == 'id':
+#                sid = attr[i+1].split('-')[1]
+#                sids.append(sid)
+#    sid = sids[0]
+
+#    while await is_tab_opened(tab):
+#        print(browser._process)
+#        print(browser.connection)
+#        time.sleep(0.5)
+#    for t in browser.tabs:
+#        if hasattr(t, 'close'):
+#            await t.close()
+#    browser.stop()
+
+    for t in browser.tabs:
+        await t.close()
+    browser.stop()
+    await wait_for_status(html, pid)
+    await _http.close_boj()
+
+#    if _evt.response.status != 200:
+#        raise Exception("The submit request failed")
+#    body, b64 = await tab.send(uc.cdp.network.get_response_body(_evt.request_id))
 
 
-async def async_aiohttp_submit(submit_form):
+async def resp_handler(event: uc.cdp.network.ResponseReceived):
+    global _evt
+    #if event.response.encoded_data_length > 0:
+    _evt = event
+
+
+async def async_aiohttp_submit(submit_form, pid):
     print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
     await _http.open_boj()
     try:
@@ -83,22 +154,30 @@ async def async_aiohttp_submit(submit_form):
         source_code = source_code.replace('\t', ' ' * tab_width)
         form.add_field('source', source_code)
         resp = await _http.async_post(url, form)
-        doc = html.fromstring(resp)
-        alert = doc.xpath('.//div[@class="alert-body"]')[0].text
-        if alert:
-            print(BWHITE(alert))
-            return
-        js = doc.xpath('.//script[@type="text/javascript" and not(@src)]')
-        for lines in js:
-            for l in lines.text.splitlines():
-                if l.find('solution_ids') != -1:
-                    sids = ''.join([c for c in l if c in '0123456789,'])
-                    sid = sids.split(',')[0]
-        print("Waiting")
-        ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
-        await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
+        await wait_for_status(resp, pid)
     finally:
         await _http.close_boj()
+
+
+async def wait_for_status(resp, pid):
+    doc = html.fromstring(resp)
+    alert = doc.xpath('.//div[@class="alert-body"]')[0].text
+    if alert:
+        print(BWHITE(alert))
+        return
+# #status-table > tbody:nth-child(2)
+#solution-95183678
+# xpath /html/body/div[2]/div[2]/div[3]/div[6]/div/table/tbody
+    js = doc.xpath('.//script[@type="text/javascript" and not(@src)]')
+    for lines in js:
+        for l in lines.text.splitlines():
+            if l.find('solution_ids') != -1:
+                sids = ''.join([c for c in l if c in '0123456789,'])
+                sid = sids.split(',')[0]
+    print("Waiting")
+    await _http.open_boj()
+    await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
+
 
 async def display_submit_result(data):
     result = data['result']

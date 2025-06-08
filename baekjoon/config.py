@@ -1,25 +1,46 @@
 import json
 import tomli
 import sqlite3
+import platform
 from os import makedirs, path, environ
 from . import __version__
+
+nix_path = [ '/usr/bin/chromium', '/usr/bin/chromium-browser',
+             '/usr/bin/google-chrome-stable', '/usr/bin/google-chrome',
+             '/snap/bin/chromium', ]
+win_path = [ 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe', ]
+mac_path = [ '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+             '/Applications/Chromium.app/Contents/MacOS/Chromium',
+             '/usr/bin/google-chrome',
+             '/usr/bin/google-chrome-stable',
+             '/usr/bin/chromium',
+             '/usr/bin/chromium-browser', ]
+
+def_browser_path = {
+    'Windows': win_path,
+    'Linux': nix_path,
+    'OpenBSD': nix_path,
+    'Darwin': mac_path,
+}
+def_browser_args = [ '--start-maximized', '--no-first-run', '--disable-notifications', ]
 
 DEFAULT_CONFIG = {
     'cache_dir': '~/boj/cache',
     'code_dir': '~/boj/code',
     'database': '~/.boj/cache.db',
     'template': '~/.boj/template.cpp',
-    'open_in_browser': True,
-    'user_agent': 'bojtools/' + __version__,
+    'open_in_browser': False,
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
     'pager': 'less',
     'code_open': 'open',
     'tab_width': 4,
     'auto_generate': True,
     'text_width': 70,
-    'boj_token': '',
-    'solved_token': '',
     'state_path': '~/.boj/state.json',
-    'browser_path': '~/.boj/browser.json',
+    'locale': 'ko-KR',
+    'browser': None,
+    'browser_args': [],
+    'browser_dir': '~/.boj/browser-cache',
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
@@ -46,9 +67,19 @@ config_path = base_dir + "/config.toml"
 conf = {}
 
 
+def find_browser_path():
+    plat = platform.system()
+    if not plat in def_browser_path:
+        return None
+    paths = def_browser_path[plat]
+    for p in paths:
+        if path.isfile(p):
+            return p
+    return None
+
+
 def load_config():
     global conf, db, state, state_path
-    global browser, browser_path
     if path.isfile(config_path):
         conf = tomli.load(open(config_path, "rb"))
     for k, v in DEFAULT_CONFIG.items():
@@ -61,12 +92,21 @@ def load_config():
     if path.isfile(state_path) and path.getsize(state_path) > 0:
         with open(state_path, 'r') as f:
             state = json.load(f)
-    browser_path = path.expanduser(conf['browser_path'])
-    if path.isfile(browser_path) and path.getsize(browser_path) > 0:
-        with open(browser_path, 'r') as f:
-            browser = json.load(f)
-            if 'user_agent' in browser:
-                conf['user_agent'] = browser['user_agent']
+            if 'user_agent' in state:
+                conf['user_agent'] = state['user_agent']
+    conf['browser_args'] += def_browser_args
+
+    if conf['browser']:
+        conf['browser'] = path.expanduser(conf['browser'])
+    else:
+        conf['browser'] = find_browser_path()
+        if not conf['browser']:
+            raise Exception("Failed to detect browser environment. Define the browser_dir within the configuration file.")
+
+    if conf['browser_dir']:
+        conf['browser_dir'] = path.expanduser(conf['browser_dir'])
+    if not path.isdir(conf['browser_dir']):
+        makedirs(conf['browser_dir'])
 
     db_path = path.expanduser(conf['database'])
     if not path.isfile(db_path):

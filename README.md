@@ -7,6 +7,8 @@ pip3 install bojtools
 ```
 
 # 사용법
+- 자동 로그인에 체크 해주셔야 login 정보가 적용됩니다.
+
 ## 로그인
 ```sh
 boj login
@@ -77,10 +79,13 @@ playwright install
 - [ ] Baekjoon workbook
 - [x] Compile and test
 - [x] Submit a code
-- [ ] Extract cookies
+- [x] Extract cookies
 - [x] Text width
 - [x] View other solution
 - [x] Support python
 - [ ] Support multi-platform
 - [ ] Improve guide documents
 - [ ] Github action
+- [ ] Edit command
+- [ ] Open command
+- [ ] Template command

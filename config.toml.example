@@ -1,16 +1,18 @@
 cache_dir = "~/boj/cache"
 code_dir = "~/boj/code"
 template = "~/.boj/template.cpp"
-open_in_browser = true
-browser = "google-chrome"
+open_in_browser = false
 pager = "less"
 tab_width = 4
 text_with = 70
 auto_generate = true
-# open, close, onlyaccepted
-code_open = "open"
-bojautologin = ""
-solved_token = ""
+code_open = "open" # open, close, onlyaccepted
+
+# browser = "/usr/bin/google-chrome
+# locale = "en-US"
+# browser_args = [ "--no-first-run" ]
+# state_path = "~/.boj/state.json"
+# browser_dir = "~/.boj/browser-cache"
 
 [[lang]]
 compile = ["g++", "-std=c++11", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"]

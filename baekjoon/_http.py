@@ -12,6 +12,7 @@ import time
 default_headers = {
     'Accept': '*/*',
     'Accept-Encoding': 'gzip',
+    'Accept-Language': config.conf['locale'],
     'User-Agent': config.conf['user_agent'],
     }
 
@@ -19,7 +20,7 @@ tokens = {}
 boj_session = None
 solved_session = None
 prev_req_time = None
-req_delay = 0.100
+req_delay = 0.000
 cookie_jar = None
 
 def add_header(newhdr, headers=default_headers):
@@ -81,6 +82,7 @@ async def async_post(url, data, headers=None):
         return None
     session = boj_session
     result = None
+    wait_req_delay()
     async with session.post(url, headers=headers, data=data) as response:
         return await response.text()
 
