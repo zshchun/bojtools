@@ -40,7 +40,8 @@ DEFAULT_CONFIG = {
     'locale': 'ko-KR',
     'browser': None,
     'browser_args': [],
-    'browser_dir': '~/.boj/browser-cache',
+#    'browser_dir': '~/.boj/browser-cache',
+    'browser_cookies': '~/.boj/cookies',
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
@@ -96,17 +97,20 @@ def load_config():
                 conf['user_agent'] = state['user_agent']
     conf['browser_args'] += def_browser_args
 
+    if conf['browser_cookies']:
+        conf['browser_cookies'] = path.expanduser(conf['browser_cookies'])
+
     if conf['browser']:
         conf['browser'] = path.expanduser(conf['browser'])
     else:
         conf['browser'] = find_browser_path()
         if not conf['browser']:
-            raise Exception("Failed to detect browser environment. Define the browser_dir within the configuration file.")
+            raise Exception("Failed to detect browser environment. Define the browser within the configuration file.")
 
-    if conf['browser_dir']:
-        conf['browser_dir'] = path.expanduser(conf['browser_dir'])
-    if not path.isdir(conf['browser_dir']):
-        makedirs(conf['browser_dir'])
+#    if conf['browser_dir']:
+#        conf['browser_dir'] = path.expanduser(conf['browser_dir'])
+#    if not path.isdir(conf['browser_dir']):
+#        makedirs(conf['browser_dir'])
 
     db_path = path.expanduser(conf['database'])
     if not path.isfile(db_path):

@@ -59,7 +59,7 @@ async def async_submit(args):
 
 async def is_tab_opened(tab):
     try:
-        isopen = await asyncio.wait_for(tab.evaluate(expression="true"), timeout=0.5)
+        isopen = await asyncio.wait_for(tab.evaluate(expression="true"), timeout=1)
         return True
     except (ConnectionRefusedError, ConnectionError, AttributeError, asyncio.TimeoutError):
         return False
@@ -71,10 +71,10 @@ async def async_nodriver_submit(url, submit_form, pid):
     source_code = open(filename, 'r').read()
     source_code = source_code.replace('\t', ' ' * config.conf['tab_width'])
     browser = await uc.start(headless=False,
-                             user_data_dir=config.conf['browser_dir'],
                              browser_executable_path=config.conf['browser'],
                              browser_args=config.conf['browser_args'],
                              lang=config.conf['locale'],)
+    await browser.cookies.load(config.conf['browser_cookies'])
     tab = browser.main_tab
     tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
 
@@ -120,6 +120,8 @@ async def async_nodriver_submit(url, submit_form, pid):
 #        if hasattr(t, 'close'):
 #            await t.close()
 #    browser.stop()
+    if not is_tab_opened(tab):
+        return
 
     for t in browser.tabs:
         await t.close()

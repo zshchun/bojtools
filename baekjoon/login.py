@@ -12,17 +12,14 @@ def start(args):
 async def async_login(args):
     browser = await uc.start(headless=False,
                              cookie=cookiejar.CookieJar(),
-                             user_data_dir=config.conf['browser_dir'],
+#                             user_data_dir=config.conf['browser_dir'],
                              browser_executable_path=config.conf['browser'],
                              browser_args=config.conf['browser_args'],
                              lang=config.conf['locale'],)
     #login_url = 'https://www.acmicpc.net/login'
     login_url = 'https://solved.ac/login'
     redirect_url = 'https://solved.ac/**'
-    tab = browser.main_tab
-    ua = await tab.evaluate('navigator.userAgent')
     tab = await browser.get(login_url)
-
     selector = "#login_form > div:nth-child(4) > div:nth-child(2) > a"
     element = await tab.select(selector)
     #element = await tab.wait_for(selector, timeout=10)
@@ -32,8 +29,10 @@ async def async_login(args):
     #cookies = await browser.cookies.get_all(requests_cookie_format=False)
     cookies = await tab.send(uc.cdp.network.get_all_cookies())
     cookies = [c.to_json() for c in cookies]
+    ua = await tab.evaluate('navigator.userAgent')
     state['cookies'] = cookies
     state['user_agent'] = ua
+    await browser.cookies.save(config.conf['browser_cookies'])
 
     with open(config.state_path, 'w') as f:
         json.dump(state, f)
