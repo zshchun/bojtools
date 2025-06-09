@@ -8,6 +8,7 @@ text_with = 70
 auto_generate = true
 code_open = "open" # open, close, onlyaccepted
 
+# headless_login = false
 # browser = "/usr/bin/google-chrome
 # locale = "en-US"
 # browser_args = [ "--no-first-run" ]

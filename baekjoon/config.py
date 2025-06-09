@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
     'database': '~/.boj/cache.db',
     'template': '~/.boj/template.cpp',
     'open_in_browser': False,
+    'headless_login': False,
     'user_agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
     'pager': 'less',
     'code_open': 'open',
