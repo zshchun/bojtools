@@ -89,3 +89,5 @@ playwright install
 - [ ] Edit command
 - [ ] Open command
 - [ ] Template command
+- [ ] Init command
+- [ ] Migrate tomli to tomllib
