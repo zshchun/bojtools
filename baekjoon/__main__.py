@@ -3,6 +3,7 @@ from . import login
 from . import solved
 from . import judge
 from . import submit
+from . import init
 from . import  __version__
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -15,6 +16,9 @@ def main():
 
     _login = subparsers.add_parser('login', aliases=['l'], help="Log in to baekjoon and solved.ac", allow_abbrev=True)
     _login.set_defaults(func=login.start)
+
+    _init = subparsers.add_parser('init', aliases=['I'], help="Setup initial file", allow_abbrev=True)
+    _init.set_defaults(func=init.setup)
 
     _pick = subparsers.add_parser('pick', aliases=['p'], help="Pick a problem", allow_abbrev=True)
     _pick.add_argument('pid', metavar='problemID', nargs='?', action='store', type=int)

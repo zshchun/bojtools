@@ -1,5 +1,6 @@
 from . import config
 from . import boj
+from .ui import *
 from .constants import *
 from http.cookies import Morsel
 from datetime import datetime, timezone
@@ -102,7 +103,8 @@ async def async_urlsopen(urls):
 async def set_cookie():
     global cookie_jar
     cookie_jar = aiohttp.CookieJar()
-    if not 'cookies' in config.state:
+    if not hasattr(config, 'state') or not 'cookies' in config.state:
+        print(YELLOW("Please log in first. ") + WHITE("(boj login)"))
         return
     for c in config.state['cookies']:
         morsel = Morsel()

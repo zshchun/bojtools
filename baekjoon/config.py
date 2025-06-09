@@ -23,6 +23,7 @@ def_browser_path = {
     'Darwin': mac_path,
 }
 def_browser_args = [ '--start-maximized', '--no-first-run', '--disable-notifications', ]
+def_user_agent = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
 
 DEFAULT_CONFIG = {
     'cache_dir': '~/boj/cache',
@@ -31,15 +32,14 @@ DEFAULT_CONFIG = {
     'template': '~/.boj/template.cpp',
     'open_in_browser': False,
     'headless_login': False,
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
     'pager': 'less',
-    'code_open': 'open',
+    'code_open': 'open', # open, close, onlyaccepted
     'tab_width': 4,
     'auto_generate': True,
     'text_width': 70,
     'state_path': '~/.boj/state.json',
     'locale': 'ko-KR',
-    'browser': None,
+    'browser': '',
     'browser_args': [],
 #    'browser_dir': '~/.boj/browser-cache',
     'browser_cookies': '~/.boj/cookies',
@@ -97,6 +97,8 @@ def load_config():
             if 'user_agent' in state:
                 conf['user_agent'] = state['user_agent']
     conf['browser_args'] += def_browser_args
+    if not 'user_agent' in conf:
+        conf['user_agent'] = def_user_agent
 
     if conf['browser_cookies']:
         conf['browser_cookies'] = path.expanduser(conf['browser_cookies'])

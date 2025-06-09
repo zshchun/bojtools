@@ -76,6 +76,7 @@ def pick_random(args):
 
     print('[+] Random pick', lv_range)
     page = 1
+    solved_count = ''
     if 'solved_count' in args and args.solved_count:
         solved_count = "solvedByGte={}&".format(args.solved_count)
     #query = parse.quote_plus(query)
