@@ -75,8 +75,8 @@ async def async_nodriver_submit(url, submit_form, pid):
                              browser_args=config.conf['browser_args'],
                              lang=config.conf['locale'],)
     await browser.cookies.load(config.conf['browser_cookies'])
-    tab = browser.main_tab
-    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
+#    tab = browser.main_tab
+#    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
 
     tab = await browser.get(url)
     await tab.scroll_down(30)
