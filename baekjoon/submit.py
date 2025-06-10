@@ -120,7 +120,7 @@ async def async_nodriver_submit(url, submit_form, pid):
 #        if hasattr(t, 'close'):
 #            await t.close()
 #    browser.stop()
-    if not is_tab_opened(tab):
+    if not await is_tab_opened(tab):
         return
 
     for t in browser.tabs:
