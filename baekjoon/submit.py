@@ -98,11 +98,11 @@ async def async_nodriver_submit(url, submit_form, pid):
                 break
         if visible: break
 
-    await tab.sleep(3)
+    await tab.sleep(10)
     await btn.click()
-    await tab.sleep(5)
-    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
+    await tab.sleep(10)
     html = await tab.get_content()
+#    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
 #    sids = []
 #    for elem in elems:
 #        attr = elem.attributes
@@ -120,14 +120,16 @@ async def async_nodriver_submit(url, submit_form, pid):
 #        if hasattr(t, 'close'):
 #            await t.close()
 #    browser.stop()
-    if not await is_tab_opened(tab):
-        return
+#    if not await is_tab_opened(tab):
+#        return
+
+    await wait_for_status(html, pid)
+    await _http.close_boj()
+    time.sleep(10)
 
     for t in browser.tabs:
         await t.close()
     browser.stop()
-    await wait_for_status(html, pid)
-    await _http.close_boj()
 
 #    if _evt.response.status != 200:
 #        raise Exception("The submit request failed")
