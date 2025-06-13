@@ -100,6 +100,7 @@ async def async_nodriver_submit(url, submit_form, pid):
 
     await tab.sleep(10)
     await btn.click()
+    await tab
     await tab.sleep(10)
     html = await tab.get_content()
 #    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
