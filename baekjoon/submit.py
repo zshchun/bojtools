@@ -102,7 +102,12 @@ async def async_nodriver_submit(url, submit_form, pid):
     await btn.click()
     await tab
     await tab.sleep(10)
-    html = await tab.get_content()
+    for i in range(3):
+        try:
+            await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
+            break
+        except TimeoutError:
+            pass
 #    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
 #    sids = []
 #    for elem in elems:
@@ -124,6 +129,7 @@ async def async_nodriver_submit(url, submit_form, pid):
 #    if not await is_tab_opened(tab):
 #        return
 
+    html = await tab.get_content()
     await wait_for_status(html, pid)
     await _http.close_boj()
     time.sleep(10)
