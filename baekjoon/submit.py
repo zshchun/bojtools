@@ -102,6 +102,7 @@ async def async_nodriver_submit(url, submit_form, pid):
     await btn.click()
     await tab
     await tab.sleep(10)
+    time.sleep(2)
     for i in range(3):
         try:
             await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
