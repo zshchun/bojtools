@@ -100,3 +100,4 @@ boj g
 - [ ] Open command
 - [ ] Template command
 - [ ] Migrate tomli to tomllib
+- [ ] Visual improvement
