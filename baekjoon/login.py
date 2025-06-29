@@ -35,10 +35,10 @@ async def async_login(args):
     await tab.sleep(5)
 
     selector = "#login_form > div:nth-child(4) > div:nth-child(2) > a"
-    element = await tab.select(selector)
+    element = await tab.wait_for(selector, timeout=60)
     #element = await tab.wait_for(selector, timeout=10)
     await element.click()
-    await tab.sleep(5)
+    await tab.sleep(60)
     await tab.select('body')
 
     state = {}
