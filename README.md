@@ -101,3 +101,4 @@ boj g
 - [ ] Template command
 - [ ] Migrate tomli to tomllib
 - [ ] Visual improvement
+- [ ] Login expiration

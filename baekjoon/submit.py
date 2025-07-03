@@ -79,8 +79,10 @@ async def async_nodriver_submit(url, submit_form, pid):
 #    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
 
     tab = await browser.get(url)
-    await tab.sleep(10)
-    await tab.scroll_down(30)
+    time.sleep(1)
+    await tab
+    await tab.select('#content')
+#    await tab.scroll_down(30)
 
     element = await tab.select("div.CodeMirror.cm-s-default div textarea")
     source_code = source_code.replace('\n', '\r')
