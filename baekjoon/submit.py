@@ -87,6 +87,7 @@ async def async_nodriver_submit(url, submit_form, pid):
     element = await tab.select("div.CodeMirror.cm-s-default div textarea")
     source_code = source_code.replace('\n', '\r')
     await element.send_keys(source_code)
+    [await tab.send(uc.cdp.input_.dispatch_key_event("rawKeyDown", windows_virtual_key_code=46)) for i in range(100)]
 #    js = "(item) => { item.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); }"
 #    await element.apply(js)
     #element = await tab.select("#cf-chl-widget-n5woi") # submit, "#submit_form > div:nth-child(7) > div > div"
