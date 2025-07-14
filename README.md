@@ -102,3 +102,4 @@ boj g
 - [ ] Migrate tomli to tomllib
 - [ ] Visual improvement
 - [ ] Login expiration
+- [ ] Add testcase command
