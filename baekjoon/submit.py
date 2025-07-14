@@ -81,16 +81,8 @@ async def async_nodriver_submit(url, submit_form, pid):
     tab = await browser.get(url)
     time.sleep(1)
     await tab
-    await tab.select('#content')
+#    await tab.select('#content')
 #    await tab.scroll_down(30)
-
-    element = await tab.select("div.CodeMirror.cm-s-default div textarea")
-    source_code = source_code.replace('\n', '\r')
-    await element.send_keys(source_code)
-    [await tab.send(uc.cdp.input_.dispatch_key_event("rawKeyDown", windows_virtual_key_code=46)) for i in range(100)]
-#    js = "(item) => { item.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); }"
-#    await element.apply(js)
-    #element = await tab.select("#cf-chl-widget-n5woi") # submit, "#submit_form > div:nth-child(7) > div > div"
     while True:
         time.sleep(0.25)
         btn = await tab.select("#submit_button")
@@ -102,12 +94,19 @@ async def async_nodriver_submit(url, submit_form, pid):
                 break
         if visible: break
 
-    await tab.sleep(10)
+    element = await tab.select("div.CodeMirror.cm-s-default div textarea")
+    source_code = source_code.replace('\n', '\r')
+    await element.send_keys(source_code)
+    [await tab.send(uc.cdp.input_.dispatch_key_event("rawKeyDown", windows_virtual_key_code=46)) for i in range(100)]
+#    js = "(item) => { item.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); }"
+#    await element.apply(js)
+    #element = await tab.select("#cf-chl-widget-n5woi") # submit, "#submit_form > div:nth-child(7) > div > div"
+
+    await tab.sleep(5)
     await btn.click()
     await tab
-    await tab.sleep(10)
-    time.sleep(2)
-    for i in range(3):
+    time.sleep(1)
+    for i in range(5):
         try:
             await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
             break
@@ -141,7 +140,7 @@ async def async_nodriver_submit(url, submit_form, pid):
 
     for t in browser.tabs:
         await t.close()
-    browser.stop()
+#    browser.stop()
 
 #    if _evt.response.status != 200:
 #        raise Exception("The submit request failed")
