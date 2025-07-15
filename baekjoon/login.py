@@ -5,6 +5,7 @@ from getpass import getpass
 import nodriver as uc
 import asyncio
 import json
+import time
 
 def start(args):
     uc.loop().run_until_complete(async_login(args))
@@ -32,15 +33,27 @@ async def async_login(args):
     await passwd_elem.send_keys(password)
     login_btn = await tab.select('#submit_button')
     await login_btn.click()
-    await tab.sleep(5)
 
-    selector = "#login_form > div:nth-child(4) > div:nth-child(2) > a"
-    element = await tab.wait_for(selector, timeout=60)
-    #element = await tab.wait_for(selector, timeout=10)
+    for i in range(60):
+        try:
+            time.sleep(1)
+            await tab
+            selector = "#login_form > div:nth-child(4) > div:nth-child(2) > a"
+            element = await tab.select(selector)
+            break
+        except TimeoutError:
+            pass
     await element.click()
-    await tab.sleep(60)
-    await tab.select('body')
 
+
+    selector = "#__next"
+    time.sleep(1)
+    for i in range(5):
+        try:
+            await tab.wait_for(selector, timeout=1)
+            break
+        except TimeoutError:
+            pass
     state = {}
     #cookies = await browser.cookies.get_all(requests_cookie_format=False)
     cookies = await tab.send(uc.cdp.network.get_all_cookies())
