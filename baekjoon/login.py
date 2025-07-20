@@ -25,16 +25,19 @@ async def async_login(args):
     #redirect_url = 'https://solved.ac/**'
     login_url = 'https://solved.ac/login'
     tab = await browser.get(login_url)
+    await tab
+    time.sleep(1);
     checkbox = await tab.select('div.col-md-6:nth-child(1) > label:nth-child(1) > input:nth-child(1)')
     await checkbox.click()
     username_elem = await tab.select('div.input-group:nth-child(2) > input:nth-child(2)')
     await username_elem.send_keys(username)
     passwd_elem = await tab.select('div.input-group:nth-child(3) > input:nth-child(2)')
     await passwd_elem.send_keys(password)
+    time.sleep(1);
     login_btn = await tab.select('#submit_button')
     await login_btn.click()
 
-    for i in range(60):
+    for i in range(120):
         try:
             time.sleep(1)
             await tab
