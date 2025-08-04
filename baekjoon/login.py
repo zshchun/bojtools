@@ -37,14 +37,13 @@ async def async_login(args):
     login_btn = await tab.select('#submit_button')
     await login_btn.click()
 
-    for i in range(120):
+    for i in range(5):
         try:
-            time.sleep(1)
-            await tab
+            await tab.select('body')
             selector = "#login_form > div:nth-child(4) > div:nth-child(2) > a"
-            element = await tab.select(selector)
+            element = await tab.wait_for(selector, timeout=60)
             break
-        except TimeoutError:
+        except: # TimeoutError:
             pass
     await element.click()
 
@@ -55,7 +54,7 @@ async def async_login(args):
         try:
             await tab.wait_for(selector, timeout=1)
             break
-        except TimeoutError:
+        except:
             pass
     state = {}
     #cookies = await browser.cookies.get_all(requests_cookie_format=False)
