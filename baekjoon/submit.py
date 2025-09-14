@@ -110,7 +110,7 @@ async def async_nodriver_submit(url, submit_form, pid):
         try:
             await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
             break
-        except TimeoutError:
+        except (uc.core.connection.ProtocolException, TimeoutError):
             pass
 #    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
 #    sids = []
