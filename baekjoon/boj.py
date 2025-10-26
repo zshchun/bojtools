@@ -241,8 +241,14 @@ async def async_view_solutions(args):
                 prog_time = td[5].text + td[5].xpath('.//span[@class]')[0].get('class').split('-')[0]
                 lang_type = code_url[0].text
                 code_url = BOJ_HOST + code_url[0].get('href')
-                code_size = td[7].text + td[7].xpath('.//span[@class]')[0].get('class').split('-')[0]
-                submit_time = td[8].xpath('.//a[@title]')[0].get('title')
+                if len(td[7]):
+                    code_size = td[7].text + td[7].xpath('.//span[@class]')[0].get('class').split('-')[0]
+                else:
+                    code_size = ""
+                if len(td[8]):
+                    submit_time = td[8].xpath('.//a[@title]')[0].get('title')
+                else:
+                    submit_time = ""
                 print("{:9s} {} {:6s} {:6s} {:6s} {:5s} {}".format(
                     submit_id, username, prog_memory, prog_time, lang_type, code_size, submit_time), end='')
                 choice = input(" View? [Ynq] ").lower()

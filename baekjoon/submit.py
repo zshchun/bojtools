@@ -85,8 +85,13 @@ async def async_nodriver_submit(url, submit_form, pid):
 #    await tab.scroll_down(30)
     while True:
         time.sleep(0.25)
-        btn = await tab.select("#submit_button")
-        attr = btn.attributes
+        for i in range(20):
+            try:
+                btn = await tab.select("#submit_button", timeout = 1)
+                attr = btn.attributes
+                break
+            except (uc.core.connection.ProtocolException, TimeoutError):
+                pass
         visible = True
         for i in range(0, len(attr), 2):
             if attr[i] == 'style' and attr[i+1] == 'display: none;':
@@ -106,7 +111,7 @@ async def async_nodriver_submit(url, submit_form, pid):
     await btn.click()
     await tab
     time.sleep(1)
-    for i in range(5):
+    for i in range(10):
         try:
             await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
             break
