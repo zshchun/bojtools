@@ -5,6 +5,7 @@ from . import judge
 from . import submit
 from . import init
 from . import  __version__
+from . import util
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
@@ -62,6 +63,7 @@ def main():
     _random.add_argument('-s', '--solved_count', action='store', type=int, help="Number of people solved")
     _random.set_defaults(func=solved.pick_random)
 
+    util.register_signal()
     args = parser.parse_args()
     if 'func' in args:
         args.func(args)

@@ -2,7 +2,21 @@ import subprocess
 import unicodedata
 from . import config
 from lxml import etree, html
-from os import path, getcwd, sep, makedirs, listdir
+from os import path, getcwd, getpid, sep, makedirs, listdir, kill
+import signal
+
+
+def sig_handler(signum, frame):
+    job = []
+    print(f"Terminated by signal : {signum}")
+    signal.signal(signum, signal.SIG_DFL)
+    kill(getpid(), signum)
+
+
+def register_signal():
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+
 
 def get_tag_text(tags):
     ret = ''
