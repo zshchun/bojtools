@@ -25,6 +25,8 @@ def get_tag_text(tags):
     return ret.strip()
 
 def wrap_html_text(s):
+    if not s:
+        return ""
     text = html.fromstring(s).text_content().replace('\n\t', '\n ')
     text = text_wrap(text, config.conf['text_width'])
     return text

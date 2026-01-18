@@ -129,20 +129,24 @@ def show_problem(prob):
             desc_text = wrap_html_text(lang['description'])
             print(desc_text)
             print(GREEN("\nInput:"))
-            in_text = wrap_html_text(lang['input'])
-            print(''.join(in_text))
+            if lang['input']:
+                in_text = wrap_html_text(lang['input'])
+                print(''.join(in_text))
             print(GREEN("\nOutput:"))
-            out_text = wrap_html_text(lang['output'])
-            print(''.join(out_text))
+            if lang['output']:
+                out_text = wrap_html_text(lang['output'])
+                print(''.join(out_text))
             if lang['hint']:
                 hint_text = wrap_html_text(lang['hint'])
                 print(''.join(hint_text))
     else:
         print(text_wrap(prob['desc'], text_width))
         print(GREEN("\nInput:"))
-        print(text_wrap(prob['input'], text_width))
+        if prob['input']:
+            print(text_wrap(prob['input'], text_width))
         print(GREEN("\nOutput:"))
-        print(text_wrap(prob['output'], text_width))
+        if prob['output']:
+            print(text_wrap(prob['output'], text_width))
         if prob['hint']:
             print(GREEN("\nHint:"))
             print(text_wrap(prob['hint'], text_width))
@@ -197,9 +201,11 @@ def drop_testcases(prob):
     idx = 1
     for tc in prob['samples']:
         in_path = "{}{}in{:d}.txt".format(prob_dir, sep, idx)
-        open(in_path, 'w').write(tc['in'])
+        tc_in = tc['in'] if tc['in'] else ""
+        tc_out = tc['out'] if tc['out'] else ""
+        open(in_path, 'w').write(tc_in)
         out_path = "{}{}ans{:d}.txt".format(prob_dir, sep, idx)
-        open(out_path, 'w').write(tc['out'])
+        open(out_path, 'w').write(tc_out)
         idx += 1
 
 def view_solutions(args):
