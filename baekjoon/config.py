@@ -23,7 +23,7 @@ def_browser_path = {
     'Darwin': mac_path,
 }
 def_browser_args = [ '--start-maximized', '--no-first-run', '--disable-notifications', ]
-def_user_agent = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+def_user_agent = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36'
 
 DEFAULT_CONFIG = {
     'cache_dir': '~/boj/cache',
