@@ -17,6 +17,13 @@ default_headers = {
     'User-Agent': config.conf['user_agent'],
     }
 
+json_headers = {
+    'Accept': 'application/json, text/plain, */',
+    'Accept-Encoding': 'gzip',
+    'Accept-Language': config.conf['locale'],
+    'User-Agent': config.conf['user_agent'],
+    }
+
 tokens = {}
 boj_session = None
 solved_session = None

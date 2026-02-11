@@ -80,8 +80,8 @@ def pick_random(args):
     if 'solved_count' in args and args.solved_count:
         solved_count = "solvedByGte={}&".format(args.solved_count)
     #query = parse.quote_plus(query)
-    #url = '{}/search?query={}&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, query, page)
-    url = ('{}/problems?levelStart={:d}&levelEnd={:d}&state=unsolved&sort=random&{}' +
+    #url = '{}/problems?query={}&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, query, page)
+    url = ('{}/api/v3/search/problem?query=(*{:d}..{:d})&state=unsolved&sort=random&{}' +
            't={:d}&direction=asc&page={:d}').format(SOLVED_HOST, lv_start, lv_end, solved_count, int(time.time()*1000), page)
     asyncio.run(async_query_solvedac(url, args.list))
 
@@ -95,9 +95,9 @@ def pick_class(args):
     if not args.all:
         extra_options += ' ~@$me'
     if args.essential:
-        url = '{}/search?query=in_class_essentials:{}{}'.format(SOLVED_HOST, level, extra_options)
+        url = '{}/problems?query=in_class_essentials:{}{}'.format(SOLVED_HOST, level, extra_options)
     else:
-        url = '{}/search?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
+        url = '{}/problems?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
     asyncio.run(async_query_solvedac(url, args.list))
 
 def save_solved_list(probs):
@@ -119,11 +119,10 @@ def get_problem_level(pid):
 async def async_get_problem_level(pid):
     await _http.open_solved()
     try:
-        url = SOLVED_HOST + '/search?query=id:' + str(pid)
-        resp = await _http.async_get(url)
-        doc = html.fromstring(resp)
-        page = json.loads(doc.xpath(".//script[@id='__NEXT_DATA__' and @type='application/json']")[0].text)
-        items = page['props']['pageProps']['problems']['items']
+        url = f'{SOLVED_HOST}/api/v3/search/problem?query=({pid})&page=1'
+        resp = await _http.async_get(url, _http.json_headers)
+        page = json.loads(resp)
+        items = page['items']
         probs = []
         for i in items:
             probs += [extract_problem(i)]
@@ -135,10 +134,9 @@ async def async_get_problem_level(pid):
 async def async_query_solvedac(url, listing=False):
     await _http.open_solved()
     try:
-        resp = await _http.async_get(url)
-        doc = html.fromstring(resp)
-        page = json.loads(doc.xpath(".//script[@id='__NEXT_DATA__' and @type='application/json']")[0].text)
-        items = page['props']['pageProps']['problems']['items']
+        resp = await _http.async_get(url, _http.json_headers)
+        page = json.loads(resp)
+        items = page['items']
         probs = []
         for i in items:
             probs += [extract_problem(i)]
