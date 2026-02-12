@@ -103,3 +103,4 @@ boj g
 - [ ] Visual improvement
 - [ ] Login expiration
 - [ ] Add testcase command
+- [ ] uv build

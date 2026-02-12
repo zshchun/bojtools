@@ -81,9 +81,9 @@ def pick_random(args):
         solved_count = f'+(s#{args.solved_count})'
     #query = parse.quote_plus(query)
     not_solved = '+(-@$me)'
-    url = f'{SOLVED_HOST}/api/v3/search/problem?query=' +
-          f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' +
-          f'&sort=random&direction=asc&page={page:d}'
+    url = (f'{SOLVED_HOST}/api/v3/search/problem?query=' +
+           f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' +
+           f'&sort=random&direction=asc&page={page:d}')
     asyncio.run(async_query_solvedac(url, args.list))
 
 def pick_class(args):
