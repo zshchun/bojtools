@@ -78,11 +78,12 @@ def pick_random(args):
     page = 1
     solved_count = ''
     if 'solved_count' in args and args.solved_count:
-        solved_count = "solvedByGte={}&".format(args.solved_count)
+        solved_count = f'+(s#{args.solved_count})'
     #query = parse.quote_plus(query)
-    #url = '{}/problems?query={}&sort=random&direction=asc&page={:d}'.format(SOLVED_HOST, query, page)
-    url = ('{}/api/v3/search/problem?query=(*{:d}..{:d})&state=unsolved&sort=random&{}' +
-           't={:d}&direction=asc&page={:d}').format(SOLVED_HOST, lv_start, lv_end, solved_count, int(time.time()*1000), page)
+    not_solved = '+(-@$me)'
+    url = f'{SOLVED_HOST}/api/v3/search/problem?query=' +
+          f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' +
+          f'&sort=random&direction=asc&page={page:d}'
     asyncio.run(async_query_solvedac(url, args.list))
 
 def pick_class(args):
