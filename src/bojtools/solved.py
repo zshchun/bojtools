@@ -88,26 +88,27 @@ def pick_random(args):
     print(url)
     asyncio.run(async_query_solvedac(url, args.list, rand=True))
 
+
 def pick_class(args):
     level = args.level
     if level < 1 or level > 10:
         print("[!] Out of class range")
         return
     print('[+] Pick class', level)
-    extra_options = ''
-    if not args.all:
-        extra_options += ' ~@$me'
+    not_solved = '+(-@$me)'
+    essential = ''
     if args.essential:
-        url = '{}/problems?query=in_class_essentials:{}{}'.format(SOLVED_HOST, level, extra_options)
-    else:
-        url = '{}/problems?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
+        essential = '_essentials'
+    url = f'{SOLVED_HOST}/api/v3/search/problem?query=solvable:true{not_solved}+in_class{essential}:{level}&page=1'
     asyncio.run(async_query_solvedac(url, args.list, rand=True))
+
 
 def save_solved_list(probs):
     cur = config.db.cursor()
     for prob in probs:
         cur.execute('INSERT or REPLACE INTO solved (pid, title, solved_count, avg_try, level) VALUES (?, ?, ?, ?, ?)', (prob['pid'], prob['title'], prob['solved_count'], prob['avg_try'], prob['level']))
     config.db.commit()
+
 
 def get_cached_level(pid):
     cur = config.db.cursor()
@@ -116,8 +117,10 @@ def get_cached_level(pid):
     info = { 'pid':q[0], 'title':q[1], 'solved_count':q[2], 'avg_try':q[3], 'level':q[4] }
     return info
 
+
 def get_problem_level(pid):
     return asyncio.run(async_get_problem_level(pid))
+
 
 async def async_get_problem_level(pid):
     await _http.open_solved()
