@@ -4,6 +4,7 @@ from . import config
 from .constants import *
 from lxml import etree, html
 from urllib import parse
+from random import randrange
 import sqlite3
 import asyncio
 import json
@@ -81,10 +82,11 @@ def pick_random(args):
         solved_count = f'+(s#{args.solved_count})'
     #query = parse.quote_plus(query)
     not_solved = '+(-@$me)'
-    url = (f'{SOLVED_HOST}/api/v3/search/problem?query=' +
-           f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' +
-           f'&sort=random&direction=asc&page={page:d}')
-    asyncio.run(async_query_solvedac(url, args.list))
+    url = f'{SOLVED_HOST}/api/v3/search/problem?query=' + \
+          f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' + \
+          f'&page={page:d}&sort=random&direction=asc'
+    print(url)
+    asyncio.run(async_query_solvedac(url, args.list, rand=True))
 
 def pick_class(args):
     level = args.level
@@ -99,7 +101,7 @@ def pick_class(args):
         url = '{}/problems?query=in_class_essentials:{}{}'.format(SOLVED_HOST, level, extra_options)
     else:
         url = '{}/problems?query=in_class:{}{}'.format(SOLVED_HOST, level, extra_options)
-    asyncio.run(async_query_solvedac(url, args.list))
+    asyncio.run(async_query_solvedac(url, args.list, rand=True))
 
 def save_solved_list(probs):
     cur = config.db.cursor()
@@ -132,7 +134,7 @@ async def async_get_problem_level(pid):
     finally:
         await _http.close_solved()
 
-async def async_query_solvedac(url, listing=False):
+async def async_query_solvedac(url, listing=False, rand=False):
     await _http.open_solved()
     try:
         resp = await _http.async_get(url, _http.json_headers)
@@ -153,6 +155,9 @@ async def async_query_solvedac(url, listing=False):
             for prob in probs:
                 print("[{:5d}] {}".format(prob['pid'], prob['title']))
         else:
-            await boj.async_pick(probs[0]['pid'])
+            prob_idx = 0
+            if rand:
+                prob_idx = randrange(len(probs))
+            await boj.async_pick(probs[prob_idx]['pid'])
     finally:
         await _http.close_solved()
