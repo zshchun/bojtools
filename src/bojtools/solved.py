@@ -85,7 +85,6 @@ def pick_random(args):
     url = f'{SOLVED_HOST}/api/v3/search/problem?query=' + \
           f'(*{lv_start:d}..{lv_end:d}){not_solved}{solved_count}' + \
           f'&page={page:d}&sort=random&direction=asc'
-    print(url)
     asyncio.run(async_query_solvedac(url, args.list, rand=True))
 
 
