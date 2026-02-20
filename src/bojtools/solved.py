@@ -79,7 +79,7 @@ def pick_random(args):
     page = 1
     solved_count = ''
     if 'solved_count' in args and args.solved_count:
-        solved_count = f'+(s#{args.solved_count})'
+        solved_count = f'+(s#{args.solved_count}..)'
     #query = parse.quote_plus(query)
     not_solved = '+(-@$me)'
     url = f'{SOLVED_HOST}/api/v3/search/problem?query=' + \
