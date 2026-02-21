@@ -1,7 +1,9 @@
 from . import config
+from . import _http
 from .ui import *
 from http import cookiejar
 from getpass import getpass
+from os import path
 import nodriver as uc
 import asyncio
 import json
@@ -72,3 +74,32 @@ async def async_login(args):
     for t in browser.tabs:
         await t.close()
 
+
+async def refresh_cookie(url):
+    print("[+] refresh cookies");
+    browser = await uc.start(
+        headless=True,
+        cookie=cookiejar.CookieJar(),
+        browser_executable_path=config.conf['browser'],
+        browser_args=config.conf['browser_args'],
+        lang=config.conf['locale'],
+    )
+    if config.conf.get('browser_cookies') and path.isfile(config.conf['browser_cookies']):
+        await browser.cookies.load(config.conf['browser_cookies'])
+    tab = await browser.get(url)
+    await tab
+    state = {}
+    cookies = await tab.send(uc.cdp.network.get_all_cookies())
+    cookies = [c.to_json() for c in cookies]
+    ua = await tab.evaluate('navigator.userAgent')
+    state['cookies'] = cookies
+    state['user_agent'] = ua
+    await browser.cookies.save(config.conf['browser_cookies'])
+    with open(config.state_path, 'w') as f:
+        json.dump(state, f)
+
+    await _http.close_boj()
+    await _http.open_boj(force=True)
+
+    for t in browser.tabs:
+        await t.close()

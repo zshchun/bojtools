@@ -1,4 +1,5 @@
 from . import config
+from . import login
 from . import boj
 from .ui import *
 from .constants import *
@@ -67,8 +68,10 @@ def wait_req_delay():
 
 async def async_get(url, headers=None):
     if headers == None: headers = default_headers
+    target = ''
     if url.startswith(BOJ_HOST):
         session = boj_session
+        target = 'boj'
     elif url.startswith(SOLVED_HOST):
         session = solved_session
     else:
@@ -77,7 +80,14 @@ async def async_get(url, headers=None):
     result = None
     wait_req_delay()
     async with session.get(url, headers=headers) as response:
+        if target != 'boj' or response.status != 403:
+            return await response.text()
+
+    await login.refresh_cookie(url)
+    time.sleep(1);
+    async with session.get(url, headers=headers) as response:
         return await response.text()
+
 
 async def async_post(url, data, headers=None):
     if headers == None: headers = default_headers
@@ -130,11 +140,11 @@ async def set_cookie():
         cookie_jar.update_cookies({morsel.key : morsel})
 
 
-async def open_boj():
+async def open_boj(force=False):
     global boj_session, cookie_jar
-    if cookie_jar == None:
+    if cookie_jar == None or force:
         await set_cookie()
-    if boj_session == None:
+    if boj_session == None or force:
         boj_session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
 
 async def open_solved():
