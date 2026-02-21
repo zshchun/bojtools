@@ -36,18 +36,18 @@ def add_header(newhdr, headers=default_headers):
     headers.update(newhdr)
     return headers
 
-def get(url, headers=None):
+def get(url, params={}, headers=None):
     global prev_req_time
-    resp = asyncio.run(async_get(url, headers))
+    resp = asyncio.run(async_get(url, params, headers))
     prev_req_time = time.time()
     if resp:
         return resp[0]
     else:
         return None
 
-def post(url, data, headers=None):
+def post(url, params={}, data={}, headers=None):
     global prev_req_time
-    resp = asyncio.run(async_post(url, data, headers))
+    resp = asyncio.run(async_post(url, params, data, headers))
     prev_req_time = time.time()
     if resp:
         return resp[0]
@@ -57,8 +57,10 @@ def post(url, data, headers=None):
 def GET(url, headers=None):
     return {'method':async_get, 'url':url, 'headers':headers}
 
+
 def POST(url, data, headers=None):
     return {'method':async_post, 'url':url, 'data':data, 'headers':headers}
+
 
 def wait_req_delay():
     if not prev_req_time:
@@ -66,7 +68,8 @@ def wait_req_delay():
     if time.time() < prev_req_time + req_delay:
         time.sleep(prev_req_time + req_delay - time.time())
 
-async def async_get(url, headers=None):
+
+async def async_get(url, params={}, headers=None):
     if headers == None: headers = default_headers
     target = ''
     if url.startswith(BOJ_HOST):
@@ -75,33 +78,33 @@ async def async_get(url, headers=None):
     elif url.startswith(SOLVED_HOST):
         session = solved_session
     else:
-        print("[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST))
-        return None
+        err = "[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST)
+        raise Exception(err)
     result = None
+
     wait_req_delay()
-    async with session.get(url, headers=headers) as response:
+    async with session.get(url, params=params, headers=headers) as response:
         if target != 'boj' or response.status != 403:
             return await response.text()
 
     await login.refresh_cookie(url)
     time.sleep(1);
-    async with session.get(url, headers=headers) as response:
+    async with session.get(url, params=params, headers=headers) as response:
         return await response.text()
 
 
-async def async_post(url, data, headers=None):
+async def async_post(url, params={}, data={}, headers=None):
     if headers == None: headers = default_headers
     if url.startswith(BOJ_HOST):
         session = boj_session
     elif url.startswith(SOLVED_HOST):
         session = solved_session
     else:
-        print("[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST))
-        return None
-    session = boj_session
+        err = "[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST)
+        raise Exception(err)
     result = None
     wait_req_delay()
-    async with session.post(url, headers=headers, data=data) as response:
+    async with session.post(url, params=params, headers=headers, data=data) as response:
         return await response.text()
 
 def urlsopen(urls):

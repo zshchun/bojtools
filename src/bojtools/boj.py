@@ -9,7 +9,7 @@ from . import _http
 from .ui import *
 from .util import *
 from .constants import *
-from lxml import etree, html
+from lxml import html
 from os import makedirs, path, sep, system
 import sys
 
@@ -223,15 +223,20 @@ async def async_view_solutions(args):
         # TODO support language_id configuration
         lang_id = 1001 # C++
         lang_ext = '.cpp'
-        url = "https://www.acmicpc.net/status?problem_id={}&user_id=&language_id={}&result_id=4".format(pid, lang_id)
+        page = 1
+        url = "https://www.acmicpc.net/status"
+        params = {'problem_id': pid, 'user_id': '',
+                  'language_id': lang_id, 'result_id': 4}
         while True:
-            resp = await _http.async_get(url)
+            resp = await _http.async_get(url, params)
             doc = html.fromstring(resp)
             tr = doc.xpath('.//table[@id="status-table"]/tbody/tr[@id]')
+            src_cnt = 0
             for row in tr:
                 td = row.xpath('.//td')
                 code_url = td[6].xpath('a[@href]')
                 if len(code_url) == 0: continue
+                src_cnt += 1
                 submit_id = td[0].text
                 user_info = td[1].xpath('.//span[@class]')
                 if user_info and user_info[0].get('class').startswith('user-'):
@@ -270,9 +275,14 @@ async def async_view_solutions(args):
                     system('{} "{}"'.format(config.conf['pager'], cache_file))
                 elif choice in ['q', 'quit']:
                     return
-            url = doc.xpath(".//a[@id='next_page']")
-            if not url: break
-            url = BOJ_HOST + url[0].get('href')
+            if src_cnt == 0:
+                print("[!] there is no solution to view")
+                break
+            page += 1
+            params['page'] = page
+            next_url = doc.xpath(".//a[@id='next_page']")
+            if not next_url: break
+            # url = BOJ_HOST + url[0].get('href')
     finally:
         await _http.close_boj()
 

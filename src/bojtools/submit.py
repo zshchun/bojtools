@@ -47,7 +47,7 @@ async def async_submit(args):
         print("[!] File not found : {}".format(filename))
         return
 
-    url = 'https://www.acmicpc.net/submit/' + str(pid)
+    url = f'https://www.acmicpc.net/submit/{pid}'
     submit_form = {
         'problem_id': str(pid),
         'language': str(lang_id),
@@ -158,11 +158,11 @@ async def resp_handler(event: uc.cdp.network.ResponseReceived):
     _evt = event
 
 
-async def async_aiohttp_submit(submit_form, pid):
-    print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
+async def async_aiohttp_submit(url, params, submit_form, pid):
+    # print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
     await _http.open_boj()
     try:
-        resp = await _http.async_get(url)
+        resp = await _http.async_get(url, params)
         doc = html.fromstring(resp)
         csrf = doc.xpath('.//input[@type="hidden" and @name="csrf_key"]')[0].get("value")
         form = aiohttp.FormData()
@@ -173,7 +173,7 @@ async def async_aiohttp_submit(submit_form, pid):
         source_code = open(filename, 'r').read()
         source_code = source_code.replace('\t', ' ' * tab_width)
         form.add_field('source', source_code)
-        resp = await _http.async_post(url, form)
+        resp = await _http.async_post(url, params, form)
         await wait_for_status(resp, pid)
     finally:
         await _http.close_boj()
