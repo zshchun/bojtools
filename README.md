@@ -80,27 +80,3 @@ boj g
 ~/.boj/config.toml 파일 편집
 
 [샘플 config.toml](https://github.com/zshchun/bojtools/blob/main/config.toml.example) 참조
-
-# TODO
-- [x] Solved.ac classes
-- [x] Random pick from Solved.ac
-- [x] Log in to Baekjoon and Solved.ac
-- [ ] Baekjoon workbook
-- [x] Compile and test
-- [x] Submit a code
-- [x] Extract cookies
-- [x] Text width
-- [x] View other solution
-- [x] Support python
-- [ ] Support multi-platform
-- [ ] Improve guide documents
-- [ ] Github action
-- [x] Init command
-- [ ] Edit command
-- [ ] Open command
-- [ ] Template command
-- [ ] Migrate tomli to tomllib
-- [ ] Visual improvement
-- [ ] Login expiration
-- [ ] Add testcase command
-- [x] uv build (PEP-621)
