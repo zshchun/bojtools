@@ -1,6 +1,8 @@
 # BOJ CLI Tools (`bojtools`)
 - 백준([Baekjoon Online Judge](https://www.acmicpc.net/)) + [Solved.ac](https://solved.ac/) 을 위한 커맨드라인 도구입니다.
 
+[한국어](./README.md) · [English](./README.en.md)
+
 ## 주요 기능
 - 문제 선택/정보 조회 (`pick`, `info`)
 - Solved.ac 기반 랜덤/클래스 문제 추천 (`random`, `class`)
@@ -65,7 +67,7 @@ code
 ## `boj pick`
 - 문제를 선택합니다.
 - 번호를 지정하지 않으면 현재 디렉토리의 정보를 표시합니다.
-- `-f' : 문제 상태 강제 갱신 (AC/WA)
+- `-f`: 문제 상태 강제 갱신 (AC/WA)
 
 예시:
 ```sh
@@ -77,9 +79,9 @@ boj p -f <번호>
 
 ## `boj random`
 - [Solved.ac](https://solved.ac/)의 특정 난이도(Gold, Silver, ...) 문제를 랜덤으로 선택합니다.
-- `-s' : 최소 풀이 인원
+- `-s`: 최소 풀이 인원
 - `-l`: 문제 목록 출력
-- 난이도 (b, s, g, p, d, r, b1, g1, ...)
+- 난이도 (`b`, `s`, `g`, `p`, `d`, `r`, `b1`, `g1`, ...)
   - b: Bronze
   - s: Silver
   - g: Gold
