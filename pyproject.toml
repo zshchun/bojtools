@@ -20,5 +20,12 @@ authors = [
 requires = ["uv_build>=0.10.4,<0.11.0"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+source-exclude = [
+    "*.png",
+    "*.jpg",
+    "*.gif",
+]
+
 [project.scripts]
 boj = "bojtools.__main__:main"
