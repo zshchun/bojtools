@@ -127,6 +127,7 @@ boj test <번호> -i <파일>
 ## `boj submit`
 - 작성한 코드를 자동으로 제출합니다.
 - 문제 제출은 Cloudflare Turnstile 때문에 브라우저가 필수 입니다.
+- 브라우저에서 Cloudflare의 체크박스가 뜨면 클릭하시면 submit 됩니다.
 
 예시:
 ```sh

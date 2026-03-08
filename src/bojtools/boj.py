@@ -11,6 +11,7 @@ from .util import *
 from .constants import *
 from lxml import html
 from os import makedirs, path, sep, system
+from urllib.parse import urlparse, parse_qs
 import sys
 
 def pick(args, silent=False):
@@ -226,7 +227,8 @@ async def async_view_solutions(args):
         page = 1
         url = "https://www.acmicpc.net/status"
         params = {'problem_id': pid, 'user_id': '',
-                  'language_id': lang_id, 'result_id': 4}
+                  'language_id': lang_id, 'result_id': 4,
+                  'from_problem': 1 }
         while True:
             resp = await _http.async_get(url, params)
             doc = html.fromstring(resp)
@@ -278,11 +280,10 @@ async def async_view_solutions(args):
             if src_cnt == 0:
                 print("[!] there is no solution to view")
                 break
-            page += 1
-            params['page'] = page
             next_url = doc.xpath(".//a[@id='next_page']")
             if not next_url: break
-            # url = BOJ_HOST + url[0].get('href')
+            params = parse_qs(next_url[0].get('href'))
+            # url = BOJ_HOST + next_url[0].get('href')
     finally:
         await _http.close_boj()
 

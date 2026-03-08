@@ -1,6 +1,6 @@
 [project]
 name = "bojtools"
-version = "0.6.5"
+version = "0.6.6"
 description = "Baekjoon Online Judge CLI tools"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -29,3 +29,6 @@ source-exclude = [
 
 [project.scripts]
 boj = "bojtools.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/zshchun/bojtools"
