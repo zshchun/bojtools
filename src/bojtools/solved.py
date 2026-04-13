@@ -122,7 +122,7 @@ def get_problem_level(pid):
 
 
 async def async_get_problem_level(pid):
-    await _http.open_solved()
+    await _http.open_session()
     try:
         url = SOLVED_V3_PROB
         params = {'query': f'({pid})', 'page': 1 }
@@ -135,10 +135,10 @@ async def async_get_problem_level(pid):
         save_solved_list(probs)
         return get_cached_level(pid)
     finally:
-        await _http.close_solved()
+        await _http.close_session()
 
 async def async_query_solvedac(url, params, listing=False, rand=False):
-    await _http.open_solved()
+    await _http.open_session()
     try:
         resp = await _http.async_get(url, params, _http.json_headers)
         page = json.loads(resp)
@@ -166,4 +166,4 @@ async def async_query_solvedac(url, params, listing=False, rand=False):
                 prob_idx = randrange(len(probs))
             await boj.async_pick(probs[prob_idx]['pid'])
     finally:
-        await _http.close_solved()
+        await _http.close_session()

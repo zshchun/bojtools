@@ -8,7 +8,6 @@ import nodriver as uc
 import time
 import random
 import asyncio
-import aiohttp
 
 ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
 
@@ -54,7 +53,6 @@ async def async_submit(args):
         'code_open': config.conf['code_open'],
     }
     await async_nodriver_submit(url, submit_form, pid)
-    #await async_aiohttp_submit(url, submit_form, pid)
 
 
 async def is_tab_opened(tab):
@@ -79,12 +77,12 @@ async def async_nodriver_submit(url, submit_form, pid):
 #    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
 
     tab = await browser.get(url)
-    time.sleep(1)
+    await asyncio.sleep(1)
     await tab
 #    await tab.select('#content')
 #    await tab.scroll_down(30)
     while True:
-        time.sleep(0.25)
+        await asyncio.sleep(0.25)
         for i in range(20):
             try:
                 btn = await tab.select("#submit_button", timeout = 1)
@@ -110,7 +108,7 @@ async def async_nodriver_submit(url, submit_form, pid):
     await tab.sleep(5)
     await btn.click()
     await tab
-    time.sleep(1)
+    await asyncio.sleep(1)
     for i in range(10):
         try:
             await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
@@ -140,8 +138,8 @@ async def async_nodriver_submit(url, submit_form, pid):
 
     html = await tab.get_content()
     await wait_for_status(html, pid)
-    await _http.close_boj()
-    time.sleep(10)
+    await _http.close_session()
+    await asyncio.sleep(10)
 
     for t in browser.tabs:
         await t.close()
@@ -158,25 +156,25 @@ async def resp_handler(event: uc.cdp.network.ResponseReceived):
     _evt = event
 
 
-async def async_aiohttp_submit(url, params, submit_form, pid):
-    # print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
-    await _http.open_boj()
-    try:
-        resp = await _http.async_get(url, params)
-        doc = html.fromstring(resp)
-        csrf = doc.xpath('.//input[@type="hidden" and @name="csrf_key"]')[0].get("value")
-        form = aiohttp.FormData()
-        for k, v in submit_form.items():
-            form.add_field(k, v)
-        form.add_field('csrf_key', csrf)
-        tab_width = config.conf['tab_width']
-        source_code = open(filename, 'r').read()
-        source_code = source_code.replace('\t', ' ' * tab_width)
-        form.add_field('source', source_code)
-        resp = await _http.async_post(url, params, form)
-        await wait_for_status(resp, pid)
-    finally:
-        await _http.close_boj()
+# async def async_aiohttp_submit(url, params, submit_form, pid):
+#     # print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
+#     await _http.open_boj()
+#     try:
+#         resp = await _http.async_get(url, params)
+#         doc = html.fromstring(resp)
+#         csrf = doc.xpath('.//input[@type="hidden" and @name="csrf_key"]')[0].get("value")
+#         form = aiohttp.FormData()
+#         for k, v in submit_form.items():
+#             form.add_field(k, v)
+#         form.add_field('csrf_key', csrf)
+#         tab_width = config.conf['tab_width']
+#         source_code = open(filename, 'r').read()
+#         source_code = source_code.replace('\t', ' ' * tab_width)
+#         form.add_field('source', source_code)
+#         resp = await _http.async_post(url, params, form)
+#         await wait_for_status(resp, pid)
+#     finally:
+#         await _http.close_boj()
 
 
 async def wait_for_status(resp, pid):
@@ -195,7 +193,7 @@ async def wait_for_status(resp, pid):
                 sids = ''.join([c for c in l if c in '0123456789,'])
                 sid = sids.split(',')[0]
     print("Waiting")
-    await _http.open_boj()
+    await _http.open_session()
     await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
 
 

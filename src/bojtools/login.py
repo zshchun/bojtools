@@ -18,7 +18,7 @@ async def async_login(args):
     username = input("Username: ")
     password = getpass("Password: ")
     browser = await uc.start(headless=config.conf['headless_login'],
-                             cookie=cookiejar.CookieJar(),
+                             cookie=None,
 #                             user_data_dir=config.conf['browser_dir'],
                              browser_executable_path=config.conf['browser'],
                              browser_args=config.conf['browser_args'],
@@ -28,16 +28,17 @@ async def async_login(args):
     login_url = 'https://solved.ac/login'
     tab = await browser.get(login_url)
     await tab
-    time.sleep(1);
+    await asyncio.sleep(1)
     checkbox = await tab.select('div.col-md-6:nth-child(1) > label:nth-child(1) > input:nth-child(1)')
     await checkbox.click()
     username_elem = await tab.select('div.input-group:nth-child(2) > input:nth-child(2)')
     await username_elem.send_keys(username)
     passwd_elem = await tab.select('div.input-group:nth-child(3) > input:nth-child(2)')
     await passwd_elem.send_keys(password)
-    time.sleep(1);
+    await asyncio.sleep(1)
     login_btn = await tab.select('#submit_button')
     await login_btn.click()
+    element = None
 
     for i in range(5):
         try:
@@ -51,13 +52,14 @@ async def async_login(args):
 
 
     selector = "#__next"
-    time.sleep(1)
+    await asyncio.sleep(1)
     for i in range(5):
         try:
             await tab.wait_for(selector, timeout=1)
             break
         except:
             pass
+#    await asyncio.sleep(5)
     state = {}
     #cookies = await browser.cookies.get_all(requests_cookie_format=False)
     cookies = await tab.send(uc.cdp.network.get_all_cookies())
@@ -79,7 +81,7 @@ async def refresh_cookie(url):
     print("[+] refresh cookies");
     browser = await uc.start(
         headless=True,
-        cookie=cookiejar.CookieJar(),
+        cookie=None,
         browser_executable_path=config.conf['browser'],
         browser_args=config.conf['browser_args'],
         lang=config.conf['locale'],
@@ -98,8 +100,8 @@ async def refresh_cookie(url):
     with open(config.state_path, 'w') as f:
         json.dump(state, f)
 
-    await _http.close_boj()
-    await _http.open_boj(force=True)
+    await _http.close_session()
+    await _http.open_session(force=True)
 
     for t in browser.tabs:
         await t.close()

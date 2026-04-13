@@ -73,7 +73,7 @@ async def async_pick(pid, force=False, silent=False):
         show_problem(prob)
         drop_testcases(prob)
         return
-    await _http.open_boj()
+    await _http.open_session()
     try:
         resp = await _http.async_get(url)
         doc = html.fromstring(resp)
@@ -110,7 +110,7 @@ async def async_pick(pid, force=False, silent=False):
             show_problem(prob)
         drop_testcases(prob)
     finally:
-        await _http.close_boj()
+        await _http.close_session()
 
 def show_problem(prob):
     print(unicode_format("\n|{:>10s} |{:>15s} |{:>10s} |{:>10s} |{:>12s} |{:>12s} |", *prob['info'].keys()))
@@ -217,7 +217,7 @@ async def async_view_solutions(args):
     if not pid:
         print("{!] problemID is empty")
         return
-    await _http.open_boj()
+    await _http.open_session()
     print("[+] View solutions")
     print(BOJ_HOST + '/problem/' + str(pid))
     try:
@@ -285,7 +285,7 @@ async def async_view_solutions(args):
             params = parse_qs(next_url[0].get('href'))
             # url = BOJ_HOST + next_url[0].get('href')
     finally:
-        await _http.close_boj()
+        await _http.close_session()
 
 def set_problem_status(pid, status):
     if not pid:

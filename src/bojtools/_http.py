@@ -26,8 +26,7 @@ json_headers = {
     }
 
 tokens = {}
-boj_session = None
-solved_session = None
+session = None
 prev_req_time = None
 req_delay = 0.750
 cookie_jar = None
@@ -73,10 +72,9 @@ async def async_get(url, params={}, headers=None):
     if headers == None: headers = default_headers
     target = ''
     if url.startswith(BOJ_HOST):
-        session = boj_session
         target = 'boj'
     elif url.startswith(SOLVED_HOST):
-        session = solved_session
+        target = 'solved'
     else:
         err = "[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST)
         raise Exception(err)
@@ -88,18 +86,14 @@ async def async_get(url, params={}, headers=None):
             return await response.text()
 
     await login.refresh_cookie(url)
-    time.sleep(1);
+    await asyncio.sleep(1)
     async with session.get(url, params=params, headers=headers) as response:
         return await response.text()
 
 
 async def async_post(url, params={}, data={}, headers=None):
     if headers == None: headers = default_headers
-    if url.startswith(BOJ_HOST):
-        session = boj_session
-    elif url.startswith(SOLVED_HOST):
-        session = solved_session
-    else:
+    if not url.startswith(BOJ_HOST) and not url.startswith(SOLVED_HOST):
         err = "[!] URLs must contain {} or {}".format(BOJ_HOST, SOLVED_HOST)
         raise Exception(err)
     result = None
@@ -143,32 +137,23 @@ async def set_cookie():
         cookie_jar.update_cookies({morsel.key : morsel})
 
 
-async def open_boj(force=False):
-    global boj_session, cookie_jar
-    if cookie_jar == None or force:
-        await set_cookie()
-    if boj_session == None or force:
-        boj_session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
 
-async def open_solved():
-    global solved_session, cookie_jar
+async def open_session(force=False):
+    global session, cookie_jar
     if cookie_jar == None:
         await set_cookie()
-    if solved_session == None:
-        solved_session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
+    if session == None or force:
+        session = await aiohttp.ClientSession(cookie_jar=cookie_jar).__aenter__()
 
-async def close_boj():
-    global boj_session
-    await boj_session.__aexit__(None, None, None)
-    boj_session = None
+async def close_session():
+    global session
+    if session:
+        await session.__aexit__(None, None, None)
+        session = None
 
-async def close_solved():
-    global solved_session
-    await solved_session.__aexit__(None, None, None)
-    solved_session = None
 
 async def websockets(url, callback, pid=None, sid=None):
-    async with boj_session.ws_connect(url) as ws:
+    async with session.ws_connect(url) as ws:
         result = 0
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
