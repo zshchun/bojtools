@@ -49,6 +49,11 @@ def main():
     _info.add_argument('-l', '--level', action='store_true', help="Show problem level")
     _info.set_defaults(func=boj.problem_info)
 
+    _archive = subparsers.add_parser('archive', aliases=['A'], help="Archive problems", allow_abbrev=True)
+    _archive.add_argument('prob_start',  metavar="problem start (example=1000)", action='store', default=1, type=int, help="Start number of problems")
+    _archive.add_argument('prob_end',  metavar="problem end (example=35505)", action='store', default=35505, type=int, help="End number of problems")
+    _archive.set_defaults(func=boj.archive_prob)
+
     _class = subparsers.add_parser('class', aliases=['c'], help="Pick a problem of classes", allow_abbrev=True)
     _class.add_argument('level',  metavar="class level (default number=1)", action='store', type=int, help="Pick a problem from solved.ac class")
     _class.add_argument('-e', '--essential', action='store_true', help="Essential problems only")

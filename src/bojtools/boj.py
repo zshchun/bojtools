@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import base64
 import asyncio
 import sqlite3
@@ -195,6 +196,34 @@ def problem_info(args):
     else:
         print("BOJ {:d} {} {}".format(prob['pid'], prob['title'], level_info))
     print(BOJ_HOST + '/problem/' + str(pid))
+
+
+def archive_prob(args):
+    print(f"[+] Archive range : {args.prob_start} ~ {args.prob_end}")
+    cur = config.db.cursor()
+    cached_num = cur.execute(f'''SELECT count(pid) FROM boj;''').fetchone()[0]
+    print(f"[+] Archived problems : {cached_num}")
+    for pid in range(args.prob_start, args.prob_end+1):
+        prob = get_cached_problem(pid)
+        if prob:
+            continue
+        print(f"[+] Archive BOJ {pid} : {BOJ_HOST}/problem/{pid}")
+        time.sleep(0.5)
+        try:
+            asyncio.run(async_pick(pid, force=False, silent=True))
+        except:
+            pass
+        prob = get_cached_problem(pid)
+        if not prob:
+            print(f"[!] Failed to archive : {pid}")
+            continue
+        if prob['lang']:
+            multi_lang = json.loads(base64.b64decode(prob['lang']))
+            for lang in multi_lang:
+                print("[+] BOJ {:d} {}".format(prob['pid'], lang['title']))
+        else:
+            print("[+] BOJ {:d} {}".format(prob['pid'], prob['title']))
+
 
 def drop_testcases(prob):
     prob_dir = path.expanduser(config.conf['code_dir']) + sep + str(prob['pid'])
