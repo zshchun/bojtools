@@ -62,7 +62,7 @@ def generate_code(args):
         outf.write(line)
     print(GREEN('[+] Generate {}'.format(new_path)))
 
-async def async_pick(pid, force=False, silent=False):
+async def async_pick(pid, force=False, silent=False, save_raw=False):
     url = BOJ_HOST + '/problem/' + str(pid)
     if not silent:
         print("[+] URL:", url)
@@ -77,6 +77,9 @@ async def async_pick(pid, force=False, silent=False):
     await _http.open_session()
     try:
         resp = await _http.async_get(url)
+        if save_raw:
+            prob_raw = path.expanduser(config.conf['code_dir']) + sep + str(pid) + '.raw'
+            open(prob_raw, 'w').write(resp)
         doc = html.fromstring(resp)
         table = doc.xpath('.//table[@id="problem-info"]')[0]
         prob = {'pid':pid}
@@ -205,12 +208,12 @@ def archive_prob(args):
     print(f"[+] Archived problems : {cached_num}")
     for pid in range(args.prob_start, args.prob_end+1):
         prob = get_cached_problem(pid)
-        if prob:
+        if prob and not args.force:
             continue
         print(f"[+] Archive BOJ {pid} : {BOJ_HOST}/problem/{pid}")
         time.sleep(0.5)
         try:
-            asyncio.run(async_pick(pid, force=False, silent=True))
+            asyncio.run(async_pick(pid, force=args.force, silent=True, save_raw=True))
         except:
             pass
         prob = get_cached_problem(pid)

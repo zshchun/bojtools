@@ -52,6 +52,7 @@ def main():
     _archive = subparsers.add_parser('archive', aliases=['A'], help="Archive problems", allow_abbrev=True)
     _archive.add_argument('prob_start',  metavar="problem start (example=1000)", action='store', default=1, type=int, help="Start number of problems")
     _archive.add_argument('prob_end',  metavar="problem end (example=35505)", action='store', default=35505, type=int, help="End number of problems")
+    _archive.add_argument('-f', '--force', action='store_true', help="Update without cache data")
     _archive.set_defaults(func=boj.archive_prob)
 
     _class = subparsers.add_parser('class', aliases=['c'], help="Pick a problem of classes", allow_abbrev=True)
