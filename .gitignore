@@ -4,3 +4,4 @@ build
 uv.lock
 .python-version
 __pycache__
+tmp

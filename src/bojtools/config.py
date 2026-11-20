@@ -43,6 +43,7 @@ DEFAULT_CONFIG = {
     'browser_args': [],
 #    'browser_dir': '~/.boj/browser-cache',
     'browser_cookies': '~/.boj/cookies',
+    'solved_handle': '',
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},

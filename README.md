@@ -33,11 +33,12 @@ boj init
 - `~/.boj/config.toml`
 
 ## `boj login`
-- baekjoon, solved.ac에 자동으로 로그인합니다.
+- solved.ac의 "BOJ로 로그인"을 통해 baekjoon, solved.ac에 로그인합니다.
 - 브라우저가 필요합니다.  (chromium, google-chrome, ...)
-- login 정보를 입력하면 브라우저가 실행 되며 자동 login 됩니다.
+- BOJ 계정 정보를 입력하면 브라우저가 실행됩니다. 브라우저에서 추가 인증이 표시되면 완료해 주세요.
 - login cookie는 `state_path`에 저장됩니다.
   - Default: `~/.boj/state.json`
+- 브라우저 쿠키 갱신 중 이전 형식의 쿠키에서 `same_party` 오류가 나면 쿠키를 초기화합니다. 로그인 세션이 필요하면 `boj login`을 다시 실행하세요.
 
 ```sh
 boj login
@@ -45,6 +46,15 @@ boj login
 Username: userid
 Password: 
 ```
+
+## solved.ac API 설정
+
+```toml
+solved_handle = "<solved.ac 사용자명>"
+```
+
+- `solved_handle`은 `random`과 `class`에서 이미 푼 문제를 제외하는 데 사용합니다. 로그인할 때 기본값으로 BOJ 아이디를 저장하므로, solved.ac 핸들이 다르면 이 값을 설정해 주세요. `class --all`과 `info --level`에는 핸들이 필요하지 않습니다.
+- `boj info --level`은 캐시가 없으면 solved.ac 문제 상세 페이지에서 난이도를 읽습니다. 해당 페이지에서 난이도를 읽지 못해도 BOJ 문제 정보는 표시합니다.
 
 
 ## 디렉토리 구조

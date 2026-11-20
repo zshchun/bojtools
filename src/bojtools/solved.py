@@ -37,11 +37,64 @@ def extract_problem_from_html(tr):
 def extract_problem(item):
     prob = {}
     prob['level'] = lvnum_to_string(item['level'])
-    prob['title'] = item['titleKo']
+    titles = item['titles']
+    prob['title'] = next((title['title'] for title in titles if title['language'] in ('ko', 'ko-KR')),
+                         titles[0]['title'] if titles else str(item['problemId']))
     prob['pid'] = int(item['problemId'])
-    prob['solved_count'] = item['acceptedUserCount']
-    prob['avg_try'] = item['averageTries']
+    prob['solved_count'] = item['solvedUserCount']
+    prob['avg_try'] = None
     return prob
+
+
+def extract_problem_detail(page, pid):
+    if not page.strip():
+        raise RuntimeError('solved.ac returned an empty problem page')
+    doc = html.fromstring(page)
+    titles = doc.xpath('//main//*[@data-problem-title]')
+    levels = doc.xpath('//main//*[@data-problem-title]/ancestor::a[1]/../span/img/@alt')
+    solved_counts = doc.xpath('//main//p[normalize-space()="푼 사람"]/following-sibling::p[1]/text()')
+    expected_path = f'/problem/{pid}'
+    boj_links = {f'https://{host}{expected_path}' for host in ('acmicpc.net', 'www.acmicpc.net')}
+    if not titles or not levels or not boj_links.intersection(doc.xpath('//main//a/@href')):
+        raise RuntimeError(f'solved.ac did not return a recognizable problem page for {pid}')
+    solved_count = solved_counts[0].replace(',', '').strip() if solved_counts else ''
+    return {
+        'pid': pid,
+        'title': titles[0].text_content().strip(),
+        'level': levels[0].strip(),
+        'solved_count': int(solved_count) if solved_count.isdecimal() else None,
+        'avg_try': None,
+    }
+
+
+def solved_headers():
+    if not any(cookie.get('name') == 'solvedacToken'
+               for cookie in getattr(config, 'state', {}).get('cookies', [])):
+        raise ValueError('Log in to solved.ac with boj login first')
+    return _http.json_headers
+
+
+def unsolved_filter():
+    handle = config.conf['solved_handle']
+    if not handle and hasattr(config, 'state'):
+        handle = config.state.get('solved_handle', '')
+    if not handle:
+        raise ValueError('Set solved_handle in ~/.boj/config.toml (or run boj login again)')
+    return f'-@{handle}'
+
+
+async def async_get_solved(url, params):
+    resp = await _http.async_get(url, params, solved_headers())
+    try:
+        page = json.loads(resp)
+    except json.JSONDecodeError as error:
+        raise RuntimeError('solved.ac returned a non-JSON response; refresh the browser login cookies') from error
+    if 'error' in page:
+        raise RuntimeError(f"solved.ac API: {page['error']['code']}: {page['error']['message']}")
+    if page.get('diagnostics'):
+        messages = ', '.join(diagnostic['message'] for diagnostic in page['diagnostics'])
+        raise RuntimeError(f'solved.ac search query: {messages}')
+    return page
 
 def lvnum_to_string(lv):
     if type(lv) == type(str()):
@@ -80,12 +133,10 @@ def pick_random(args):
     if 'solved_count' in args and args.solved_count:
         solved_count = f' (s#{args.solved_count}..)'
     #query = parse.quote_plus(query)
-    url = SOLVED_V3_PROB
-    query = f'(*{lv_start:d}..{lv_end:d}) (-@$me){solved_count}'
-    params = {'query': query, 'page': 1, 'sort': 'random'}
+    url = SOLVED_V4_PROBS
+    query = f'(*{lv_start:d}..{lv_end:d}) ({unsolved_filter()}){solved_count}'
+    params = {'q': query, 'page': 1, 'sort': 'random'}
     asyncio.run(async_query_solvedac(url, params, args.list, rand=True))
-
-# curl 'https://solved.ac/api/v3/search/problem?query=(*11..15)+(-%40$me)+(s%23320..)&page=1'
 
 def pick_class(args):
     level = args.level
@@ -96,9 +147,10 @@ def pick_class(args):
     essential = ''
     if args.essential:
         essential = '_essentials'
-    url = SOLVED_V3_PROB
-    query = f'solvable:true (-@$me) in_class{essential}:{level}'
-    params = {'query': query, 'page': 1}
+    url = SOLVED_V4_PROBS
+    solved_filter = '' if args.all else f' ({unsolved_filter()})'
+    query = f'solvable:true{solved_filter} in_class{essential}:{level}'
+    params = {'q': query, 'page': 1, 'sort': 'random'}
     asyncio.run(async_query_solvedac(url, params, args.list, rand=True))
 
 
@@ -124,15 +176,8 @@ def get_problem_level(pid):
 async def async_get_problem_level(pid):
     await _http.open_session()
     try:
-        url = SOLVED_V3_PROB
-        params = {'query': f'({pid})', 'page': 1 }
-        resp = await _http.async_get(url, params, _http.json_headers)
-        page = json.loads(resp)
-        items = page['items']
-        probs = []
-        for i in items:
-            probs += [extract_problem(i)]
-        save_solved_list(probs)
+        page = await _http.async_get(f'{SOLVED_HOST}/ko/p/{pid}')
+        save_solved_list([extract_problem_detail(page, pid)])
         return get_cached_level(pid)
     finally:
         await _http.close_session()
@@ -140,10 +185,9 @@ async def async_get_problem_level(pid):
 async def async_query_solvedac(url, params, listing=False, rand=False):
     await _http.open_session()
     try:
-        resp = await _http.async_get(url, params, _http.json_headers)
-        page = json.loads(resp)
-        items = page['items']
-        count = page['count']
+        page = await async_get_solved(url, params)
+        items = page['problems']
+        count = page['total']
         probs = []
         if count > 1:
             print(f'[+] Problems : {count}')

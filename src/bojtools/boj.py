@@ -189,8 +189,12 @@ def problem_info(args):
     if 'level' in args and args.level:
         sinfo = solved.get_cached_level(pid)
         if not sinfo:
-            sinfo = solved.get_problem_level(pid)
-        level_info = "(" + sinfo['level'] + ")"
+            try:
+                sinfo = solved.get_problem_level(pid)
+            except RuntimeError as error:
+                print(f'[!] {error}', file=sys.stderr)
+        if sinfo:
+            level_info = "(" + sinfo['level'] + ")"
 
     if prob['lang']:
         multi_lang = json.loads(base64.b64decode(prob['lang']))

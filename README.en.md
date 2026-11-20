@@ -33,11 +33,12 @@ Generated file:
 - `~/.boj/config.toml`
 
 ## `boj login`
-- Automatically logs in to Baekjoon and Solved.ac.
+- Signs in to Baekjoon and solved.ac through solved.ac's "Sign in with BOJ" button.
 - A browser is required (chromium, google-chrome, ...).
-- After entering credentials, a browser opens and performs auto-login.
+- Enter your BOJ credentials, then complete any additional verification shown in the browser.
 - Login cookies are saved to `state_path`.
   - Default: `~/.boj/state.json`
+- If an older browser cookie file causes a `same_party` error during refresh, the cookies are reset. Run `boj login` again if you need a signed-in session.
 
 ```sh
 boj login
@@ -45,6 +46,14 @@ boj login
 Username: userid
 Password:
 ```
+
+## solved.ac API setup
+
+```toml
+solved_handle = "<solved.ac username>"
+```
+
+- If the level is not cached, `boj info --level` reads it from the solved.ac problem page. If it cannot read the level, it still shows the BOJ problem information.
 
 ## Directory Structure
 - If `code_dir` in *config.toml* is `~/code`, it is structured like this. (default: `~/boj/code`)
