@@ -2,9 +2,11 @@ from . import config
 from . import _http
 from .ui import *
 from .util import *
+from aiohttp import ClientError
 from lxml import etree, html
 from urllib.parse import quote_plus
 import nodriver as uc
+import re
 import time
 import random
 import asyncio
@@ -111,7 +113,7 @@ async def async_nodriver_submit(url, submit_form, pid):
     await asyncio.sleep(1)
     for i in range(10):
         try:
-            await tab.wait_for('div.col-md-12:nth-child(6)', timeout = 1)
+            await tab.wait_for('#status-table, .alert-body', timeout=1)
             break
         except (uc.core.connection.ProtocolException, TimeoutError):
             pass
@@ -136,13 +138,23 @@ async def async_nodriver_submit(url, submit_form, pid):
 #    if not await is_tab_opened(tab):
 #        return
 
-    html = await tab.get_content()
-    await wait_for_status(html, pid)
-    await _http.close_session()
-    await asyncio.sleep(10)
+    try:
+        finished = await wait_for_status(await tab.get_content(), pid)
+    except (ClientError, asyncio.TimeoutError) as error:
+        print(f'[!] Could not receive the BOJ judging result: {error}')
+        finished = False
+    finally:
+        await _http.close_session()
+    if finished:
+        await asyncio.sleep(10)
+    elif not tab.closed:
+        print('[!] Check the BOJ page and close the tab when done.')
+        while not tab.closed:
+            await asyncio.sleep(0.5)
 
     for t in browser.tabs:
-        await t.close()
+        if not t.closed:
+            await t.close()
 #    browser.stop()
 
 #    if _evt.response.status != 200:
@@ -178,23 +190,35 @@ async def resp_handler(event: uc.cdp.network.ResponseReceived):
 
 
 async def wait_for_status(resp, pid):
-    doc = html.fromstring(resp)
-    alert = doc.xpath('.//div[@class="alert-body"]')[0].text
+    doc = html.fromstring(resp or '<html></html>')
+    alert = doc.xpath('normalize-space(//*[contains(concat(" ", normalize-space(@class), " "), " alert-body ")])')
     if alert:
         print(BWHITE(alert))
-        return
-# #status-table > tbody:nth-child(2)
-#solution-95183678
-# xpath /html/body/div[2]/div[2]/div[3]/div[6]/div/table/tbody
-    js = doc.xpath('.//script[@type="text/javascript" and not(@src)]')
-    for lines in js:
-        for l in lines.text.splitlines():
-            if l.find('solution_ids') != -1:
-                sids = ''.join([c for c in l if c in '0123456789,'])
-                sid = sids.split(',')[0]
-    print("Waiting")
-    await _http.open_session()
-    await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
+        return False
+
+    rows = doc.xpath('//*[@id="status-table"]//tr[starts-with(@id, "solution-")]')
+    if rows and rows[0].xpath('.//a[@href=$problem_url]', problem_url=f'/problem/{pid}'):
+        row = rows[0]
+        sid = row.get('id').split('-', 1)[1]
+        for script in doc.xpath('//script[not(@src)]/text()'):
+            ids = re.search(r'\bsolution_ids\s*=\s*\[([^;]*)\]\s*;', script)
+            if not ids:
+                continue
+            result = re.search(rf'\[\s*{re.escape(sid)}\s*,\s*(\d+)\s*\]', ids[1])
+            if not result:
+                continue
+            if int(result[1]) >= 4:
+                status = row.xpath('normalize-space(./td[@class="result"])')
+                if status:
+                    print(f'{sid} : {status}')
+                    return True
+                break
+            print('Waiting')
+            await _http.open_session()
+            await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
+            return True
+    print('[!] Could not identify the submission on the BOJ page.')
+    return False
 
 
 async def display_submit_result(data):

@@ -135,6 +135,7 @@ boj test <number> -i <file>
 ## `boj submit`
 - Automatically submits your code.
 - A browser is required for submission due to Cloudflare Turnstile.
+- The browser stays open for 10 seconds after the result is printed. If BOJ shows an error or the result cannot be read, close the tab after checking the page.
 
 Examples:
 ```sh
