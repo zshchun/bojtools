@@ -8,7 +8,11 @@ import asyncio
 import subprocess
 
 def find_input_files(_dir):
-    ins = [_dir + sep + f for f in sorted(listdir(_dir)) if path.isfile(f) and path.splitext(f)[-1] == '.txt' and f.startswith('in')]
+    ins = []
+    for name in sorted(listdir(_dir)):
+        candidate = path.join(_dir, name)
+        if path.isfile(candidate) and path.splitext(name)[-1] == '.txt' and name.startswith('in'):
+            ins.append(candidate)
     return ins
 
 def compile_code(args):

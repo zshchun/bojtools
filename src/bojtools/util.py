@@ -48,7 +48,11 @@ def get_cwd_info():
 def find_source_files(_dir):
     exts = [k['ext'] for k in config.conf['lang']]
     if not exts: return
-    files = [_dir + sep + f for f in listdir(_dir) if path.isfile(f) and path.splitext(f)[-1].lstrip('.') in exts]
+    files = []
+    for name in listdir(_dir):
+        candidate = path.join(_dir, name)
+        if path.isfile(candidate) and path.splitext(name)[-1].lstrip('.') in exts:
+            files.append(candidate)
     return files
 
 def prepare_problem_dir(pid):

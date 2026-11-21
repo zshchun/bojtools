@@ -79,7 +79,8 @@ async def async_pick(pid, force=False, silent=False, save_raw=False):
         resp = await _http.async_get(url)
         if save_raw:
             prob_raw = path.expanduser(config.conf['code_dir']) + sep + str(pid) + '.raw'
-            open(prob_raw, 'w').write(resp)
+            with open(prob_raw, 'w', encoding='utf-8') as raw_file:
+                raw_file.write(resp)
         doc = html.fromstring(resp)
         table = doc.xpath('.//table[@id="problem-info"]')[0]
         prob = {'pid':pid}

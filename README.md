@@ -126,6 +126,7 @@ boj generate <번호>
 ## `boj test`
 - 코드를 compile해서 test case의 intput, output으로 test 합니다.
 - gcc 등의 compiler 설치가 필요합니다.
+- 문제 번호를 지정하면 `code_dir/<번호>`를 기준으로 예제 입출력과 소스를 찾습니다. `-i`를 지정하면 해당 소스 파일을 사용합니다.
 
 예시:
 ```sh
@@ -136,6 +137,7 @@ boj test <번호> -i <파일>
 
 ## `boj submit`
 - 작성한 코드를 자동으로 제출합니다.
+- 문제 번호를 지정하면 `code_dir/<번호>`를 기준으로 제출할 소스를 찾습니다. `-i`를 지정하면 해당 소스 파일을 사용합니다.
 - 문제 제출은 Cloudflare Turnstile 때문에 브라우저가 필수 입니다.
 - 브라우저에서 Cloudflare의 체크박스가 뜨면 클릭하시면 submit 됩니다.
 - 채점 결과를 터미널에 표시한 뒤 브라우저를 10초 동안 유지합니다. 제출 오류가 표시되거나 채점 결과를 읽지 못하면 직접 확인할 수 있도록 탭을 열어 둡니다.
@@ -180,6 +182,17 @@ boj info <번호>
 
 # 난이도 출력 (Silver, Gold, Platinum, ...)
 boj i -l <번호>
+```
+
+## `boj archive <시작 번호> <끝 번호>`
+- 새로 가져온 문제의 HTML을 `code_dir/<번호>.raw`에 UTF-8로 저장합니다.
+
+## 개발 테스트
+
+저장소 루트에서 실행합니다. 테스트는 임시 디렉터리와 모의 HTTP·브라우저를 사용합니다.
+
+```sh
+uv run --group test pytest
 ```
 
 ## 환경설정 경로

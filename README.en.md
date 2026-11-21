@@ -124,6 +124,7 @@ boj generate <number>
 ## `boj test`
 - Compiles code and tests with testcase input/output.
 - A compiler such as gcc is required.
+- With a problem number, sample files and source are found in `code_dir/<number>`. Use `-i` to specify a source file.
 
 Examples:
 ```sh
@@ -134,6 +135,7 @@ boj test <number> -i <file>
 
 ## `boj submit`
 - Automatically submits your code.
+- With a problem number, source is found in `code_dir/<number>`. Use `-i` to specify a source file.
 - A browser is required for submission due to Cloudflare Turnstile.
 - The browser stays open for 10 seconds after the result is printed. If BOJ shows an error or the result cannot be read, close the tab after checking the page.
 
@@ -177,6 +179,17 @@ boj info <number>
 
 # Print difficulty (Silver, Gold, Platinum, ...)
 boj i -l <number>
+```
+
+## `boj archive <start> <end>`
+- Saves newly fetched problem HTML as UTF-8 in `code_dir/<number>.raw`.
+
+## Running Tests
+
+Run from the repository root. Tests use temporary directories and mock HTTP and browser calls.
+
+```sh
+uv run --group test pytest
 ```
 
 ## Configuration Path
