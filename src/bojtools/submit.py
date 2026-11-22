@@ -8,13 +8,13 @@ from lxml import html
 from patchright.async_api import Error as PlaywrightError
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from . import _http, config
+from . import _http, boj, config
 from ._browser import browser_page
-from .constants import BOJ_HOST
+from .constants import BOJ_HOST, STATUS_AC, STATUS_WA
 from .ui import BLUE, BWHITE, GREEN, RED, redraw
 from .util import guess_pid, select_source_code
 
-ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
+JUDGING_TIMEOUT = 60
 
 
 def submit(args):
@@ -42,10 +42,10 @@ async def async_submit(args):
         print("[!] File not found : {}".format(filename))
         return
 
-    await async_playwright_submit(f'{BOJ_HOST}/submit/{pid}', filename, pid)
+    await async_playwright_submit(f'{BOJ_HOST}/submit/{pid}', filename, pid, config.lang_ids[lang[0]])
 
 
-async def async_playwright_submit(url, filename, pid):
+async def async_playwright_submit(url, filename, pid, language_id=None):
     with open(filename, 'r') as source:
         source_code = source.read().replace('\t', ' ' * config.conf['tab_width'])
 
@@ -63,6 +63,15 @@ async def async_playwright_submit(url, filename, pid):
                     or destination.path != urlsplit(url).path):
                 print('[!] The submission page opened on an unexpected site.')
                 return
+
+            if language_id is not None:
+                language = page.locator('select[name="language"], select[name="language_id"], select#language')
+                try:
+                    await language.select_option(value=str(language_id), timeout=10_000)
+                except PlaywrightError:
+                    print(f'[!] BOJ does not offer language ID {language_id} on this submission page.')
+                    await page.wait_for_event('close', timeout=0)
+                    return
 
             # CodeMirror's editor API updates the document used by the normal form submit.
             editor = page.locator('div.CodeMirror')
@@ -100,7 +109,7 @@ async def _wait_for_result(page, content, pid):
         if not page.is_closed():
             await page.wait_for_event('close', timeout=0)
 
-    result = asyncio.create_task(wait_for_status(content, pid))
+    result = asyncio.create_task(wait_for_status(content, pid, page))
     tab_closed = asyncio.create_task(wait_for_close())
     try:
         done, _ = await asyncio.wait((result, tab_closed), return_when=asyncio.FIRST_COMPLETED)
@@ -113,7 +122,7 @@ async def _wait_for_result(page, content, pid):
         await _http.close_session()
 
 
-async def wait_for_status(resp, pid):
+async def wait_for_status(resp, pid, page=None):
     doc = html.fromstring(resp or '<html></html>')
     alert = doc.xpath('normalize-space(//*[contains(concat(" ", normalize-space(@class), " "), " alert-body ")])')
     if alert:
@@ -138,10 +147,50 @@ async def wait_for_status(resp, pid):
                     return True
                 break
             print('Waiting')
-            await _http.open_session()
-            await _http.websockets(ws_url, display_submit_result, pid=pid, sid=sid)
-            return True
+            return await _poll_judging_result(page, pid, sid)
     print('[!] Could not identify the submission on the BOJ page.')
+    return False
+
+
+async def _poll_judging_result(page, pid, sid):
+    destination = urlsplit(page.url)
+    if (destination.scheme != 'https'
+            or destination.hostname not in ('acmicpc.net', 'www.acmicpc.net')
+            or destination.port not in (None, 443)):
+        print('[!] The judging page opened on an unexpected site.')
+        return False
+    origin = f'https://{destination.hostname}'
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + JUDGING_TIMEOUT
+    previous = None
+    while not page.is_closed():
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            print(f'[!] No final judging result received within {JUDGING_TIMEOUT} seconds.')
+            return False
+        try:
+            response = await page.request.post(
+                f'{origin}/status/ajax', form={'solution_id': sid},
+                headers={'X-Requested-With': 'XMLHttpRequest', 'Referer': f'{origin}/status'},
+                max_redirects=0, timeout=min(5, remaining) * 1000,
+            )
+            try:
+                data = await response.json() if response.ok else None
+            finally:
+                await response.dispose()
+        except (PlaywrightError, ValueError):
+            data = None
+        if (isinstance(data, dict) and not data.get('error')
+                and str(data.get('solution_id')) == sid and str(data.get('result')).isdecimal()):
+            result = int(data['result'])
+            progress = (result, data.get('progress'))
+            if progress != previous:
+                await display_submit_result({**data, 'solution_id': int(sid), 'result': result})
+                previous = progress
+            if result >= 4:
+                boj.set_problem_status(pid, STATUS_AC if result == 4 else STATUS_WA)
+                return True
+        await asyncio.sleep(min(2, max(0, deadline - loop.time())))
     return False
 
 
@@ -153,12 +202,14 @@ async def display_submit_result(data):
     elif result == 2:
         msg += "Ready      "
     elif result == 3:
-        if 'progress' in data:
-            msg += "{:3d}%     ".format(data['progress'])
+        if str(data.get('progress')).isdecimal():
+            msg += "{:3d}%     ".format(int(data['progress']))
         else:
             msg += "  0%     "
     elif result == 4:
-        msg += "{:s}\n{:6d}KB {:6d}ms".format(GREEN("Accepted"), data['memory'], data['time'])
+        msg += GREEN("Accepted")
+        if all(str(data.get(field)).isdecimal() for field in ('memory', 'time')):
+            msg += "\n{:6d}KB {:6d}ms".format(int(data['memory']), int(data['time']))
     elif result == 5:
         msg += RED("Wrong Output Format")
     elif result == 6:
@@ -167,12 +218,14 @@ async def display_submit_result(data):
         msg += RED("Time Limit Exceed")
     elif result == 8:
         msg += BLUE("Memory Limit Exceed")
-    elif result == 8:
+    elif result == 9:
         msg += BLUE("Output Limit Exceed")
     elif result == 10:
         msg += BLUE("Runtime Error")
     elif result == 11:
         msg += BLUE("Compile Error")
+    else:
+        msg += data.get('result_name') or f'Result {result}'
     if result >= 4:
         print()
     redraw(msg)

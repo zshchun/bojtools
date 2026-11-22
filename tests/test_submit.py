@@ -51,10 +51,11 @@ def test_async_submit_rejects_bad_input(
 
 
 @pytest.mark.parametrize("explicit_filename", [True, False])
+@pytest.mark.parametrize(("extension", "language_id"), [("py", 28), ("rs", 113), ("java", 93), ("go", 12)])
 def test_async_submit_dispatches_normalized_problem_and_source(
-    submit_module, monkeypatch, tmp_path, explicit_filename
+    submit_module, monkeypatch, tmp_path, explicit_filename, extension, language_id
 ):
-    source = tmp_path / "main.py"
+    source = tmp_path / f"main.{extension}"
     source.write_text("print(42)\n")
     select_source = Mock(return_value=str(source))
     submit_in_browser = AsyncMock()
@@ -69,7 +70,7 @@ def test_async_submit_dispatches_normalized_problem_and_source(
     else:
         select_source.assert_called_once_with(1000)
     submit_in_browser.assert_awaited_once_with(
-        "https://www.acmicpc.net/submit/1000", str(source), 1000
+        "https://www.acmicpc.net/submit/1000", str(source), 1000, language_id
     )
 
 
@@ -102,14 +103,42 @@ def test_wait_for_status_prints_existing_final_result(submit_module, status_sess
     status_session.websocket.assert_not_awaited()
 
 
-def test_wait_for_status_subscribes_for_pending_result(submit_module, status_session, capsys):
-    assert asyncio.run(submit_module.wait_for_status(status_page(3), 1000)) is True
-
-    assert "Waiting" in capsys.readouterr().out
-    status_session.open.assert_awaited_once()
-    status_session.websocket.assert_awaited_once_with(
-        submit_module.ws_url, submit_module.display_submit_result, pid=1000, sid="42"
+def test_wait_for_status_recovers_final_result_after_pending_page(submit_module, monkeypatch, capsys):
+    pending = SimpleNamespace(
+        ok=True, json=AsyncMock(return_value={"solution_id": "42", "result": "3", "progress": "15"}),
+        dispose=AsyncMock(),
     )
+    final = SimpleNamespace(
+        ok=True, json=AsyncMock(return_value={"solution_id": "42", "result": "4", "memory": "100", "time": "2"}),
+        dispose=AsyncMock(),
+    )
+    post = AsyncMock(side_effect=[pending, final])
+    page = SimpleNamespace(url="https://acmicpc.net/status", request=SimpleNamespace(post=post), is_closed=lambda: False)
+    update = Mock()
+    monkeypatch.setattr(submit_module.boj, "set_problem_status", update)
+    monkeypatch.setattr(submit_module.asyncio, "sleep", AsyncMock())
+
+    assert asyncio.run(submit_module.wait_for_status(status_page(3), 1000, page)) is True
+
+    output = capsys.readouterr().out
+    assert "Waiting" in output and "15%" in output and "Accepted" in output
+    assert post.await_count == 2
+    assert post.await_args.args == ("https://acmicpc.net/status/ajax",)
+    assert post.await_args.kwargs["form"] == {"solution_id": "42"}
+    pending.dispose.assert_awaited_once()
+    final.dispose.assert_awaited_once()
+    update.assert_called_once_with(1000, submit_module.STATUS_AC)
+
+
+def test_wait_for_status_stops_polling_when_endpoint_does_not_respond(submit_module, monkeypatch, capsys):
+    post = AsyncMock(side_effect=PlaywrightTimeoutError("no response"))
+    page = SimpleNamespace(url="https://acmicpc.net/status", request=SimpleNamespace(post=post), is_closed=lambda: False)
+    monkeypatch.setattr(submit_module, "JUDGING_TIMEOUT", 0.01)
+
+    assert asyncio.run(submit_module.wait_for_status(status_page(3), 1000, page)) is False
+
+    post.assert_awaited()
+    assert "No final judging result" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -169,10 +198,12 @@ def browser_submission(submit_module, monkeypatch, tmp_path):
     source = tmp_path / "main.py"
     source.write_text("def example():\n\tpass\n")
     button = SimpleNamespace(wait_for=AsyncMock(), click=AsyncMock())
+    language = SimpleNamespace(select_option=AsyncMock())
     editor = SimpleNamespace(wait_for=AsyncMock(), evaluate=AsyncMock())
     result = SimpleNamespace(wait_for=AsyncMock())
     locators = {
         "#submit_button": button,
+        'select[name="language"], select[name="language_id"], select#language': language,
         "div.CodeMirror": editor,
         "#status-table:visible, .alert-body:visible": SimpleNamespace(first=result),
     }
@@ -202,9 +233,30 @@ def browser_submission(submit_module, monkeypatch, tmp_path):
     monkeypatch.setattr(submit_module._http, "close_session", close_session)
     return SimpleNamespace(
         url=url, source=str(source), browser_page=browser_page, page=page, page_exited=page_exited,
-        button=button, editor=editor, result=result, wait_for_result=wait_for_result,
+        button=button, language=language, editor=editor, result=result, wait_for_result=wait_for_result,
         close_session=close_session,
     )
+
+
+@pytest.mark.parametrize("available", [True, False])
+def test_browser_selects_configured_runtime_before_submit(submit_module, browser_submission, available):
+    flow = browser_submission
+    flow.wait_for_result.return_value = True
+
+    async def select_option(**kwargs):
+        flow.button.click.assert_not_awaited()
+        if not available:
+            raise PlaywrightTimeoutError("No such option")
+
+    flow.language.select_option.side_effect = select_option
+    asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000, 113))
+
+    flow.language.select_option.assert_awaited_once_with(value="113", timeout=10_000)
+    if available:
+        flow.button.click.assert_awaited_once()
+    else:
+        flow.button.click.assert_not_awaited()
+        flow.page.wait_for_event.assert_awaited_once_with("close", timeout=0)
 
 
 @pytest.mark.parametrize("outcome", [True, False, ClientError, TimeoutError])
@@ -244,7 +296,7 @@ def test_browser_submission_retains_tab_for_inspection_only_when_needed(
     )
     flow.button.click.assert_awaited_once_with(timeout=300_000)
     flow.result.wait_for.assert_awaited_once_with(state="visible", timeout=10_000)
-    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000)
+    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000, flow.page)
     flow.close_session.assert_awaited_once()
     flow.page_exited.assert_called_once()
     stdout = capsys.readouterr().out
@@ -297,7 +349,7 @@ def test_canonical_boj_redirect_submits(submit_module, browser_submission, redir
 
     flow.editor.evaluate.assert_awaited_once()
     flow.button.click.assert_awaited_once_with(timeout=300_000)
-    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000)
+    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000, flow.page)
     flow.page_exited.assert_called_once()
 
 

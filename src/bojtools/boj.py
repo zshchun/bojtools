@@ -46,11 +46,18 @@ def generate_code(args):
         print("[!] Invalid problem ID")
         return
     template_path = path.expanduser(config.conf['template'])
+    stem, ext = path.splitext(template_path)
+    language = config.conf['language']
+    if language:
+        if not any(entry['ext'] == language for entry in config.conf['lang']):
+            print("[!] Unknown language extension:", language)
+            return
+        ext = '.' + language
+        template_path = stem + ext
     if not path.isfile(template_path):
-        print("[!] Template file not found")
+        print("[!] Template file not found:", template_path)
         return
     prob_dir = prepare_problem_dir(pid)
-    ext = path.splitext(template_path)[-1]
     assert ext != "", "[!] File extension not found"
     new_path = prob_dir + sep + str(pid) + ext
     if path.exists(new_path):
@@ -254,14 +261,26 @@ async def async_view_solutions(args):
     if not pid:
         print("{!] problemID is empty")
         return
+    configured = config.conf['language']
+    language = configured or path.splitext(config.conf['template'])[1].lstrip('.')
+    if configured or language != 'cpp':
+        lang_name = next((entry.get('lang_id') for entry in config.conf['lang']
+                          if entry['ext'] == language), None)
+        if configured and lang_name not in config.lang_ids:
+            print("[!] No BOJ language configured for extension:", language)
+            return
+    else:
+        lang_name = None
+    if lang_name in config.lang_ids:
+        lang_id = config.lang_ids[lang_name]
+        lang_ext = '.' + language
+    else:
+        lang_id = config.lang_ids['C++']
+        lang_ext = '.cpp'
     await _http.open_session()
     print("[+] View solutions")
     print(BOJ_HOST + '/problem/' + str(pid))
     try:
-        # TODO support language_id configuration
-        lang_id = 1001 # C++
-        lang_ext = '.cpp'
-        page = 1
         url = "https://www.acmicpc.net/status"
         params = {'problem_id': pid, 'user_id': '',
                   'language_id': lang_id, 'result_id': 4,

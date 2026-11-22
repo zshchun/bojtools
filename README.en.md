@@ -111,7 +111,8 @@ boj r -s 1000 s2 g3
 
 ## `boj generate`
 - Generates starter code from a template.
-- Copied from the template in `config.toml`. (Default: `~/.boj/template.cpp`)
+- Copies the template set in `config.toml`, which defaults to `~/.boj/template.cpp`.
+- Set `language = "rs"` to use a sibling `template.rs` and generate `<number>.rs`. The same rule applies to `java`, `go`, `cpp`, and `py`. Create the template file you want to use.
 
 Examples:
 ```sh
@@ -133,10 +134,11 @@ boj test <number> -i <file>
 ```
 
 ## `boj submit`
+- Selects the submission language based on the source extension. The defaults support C++17, Python 3, Rust 2021, Java 11, and Go. Java submissions should use a `Main` class.
 - Automatically submits your code.
 - With a problem number, source is found in `code_dir/<number>`. Use `-i` to specify a source file.
 - A browser is required for submission due to Cloudflare Turnstile.
-- The browser stays open for 10 seconds after the result is printed. If BOJ shows an error or the result cannot be read, close the tab after checking the page.
+- The CLI checks for the judging result for up to 60 seconds and closes the browser 10 seconds after printing it. If BOJ shows an error or no result arrives in time, the tab stays open for inspection.
 
 Examples:
 ```sh
@@ -147,6 +149,7 @@ boj submit <number> -i <file>
 
 ## `boj solution`
 - Views other accepted solutions for a problem.
+- Filters by the BOJ language configured for the `language` extension. If unset, it uses the registered template extension, with the default C++ template showing all C++ solutions.
 - Only available for problems you solved with AC.
 
 Examples:

@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
     'code_dir': '~/boj/code',
     'database': '~/.boj/cache.db',
     'template': '~/.boj/template.cpp',
+    'language': '',
     'open_in_browser': False,
     'headless_login': False,
     'pager': 'less',
@@ -47,6 +48,9 @@ DEFAULT_CONFIG = {
     'lang': [
         {'ext': "cpp", 'cmd': ["%PROB_NUM%"], 'compile': ["g++", "-Wall", "-W", "-std=c++17", "-O2", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "C++17"},
         {'ext': "py", 'cmd': ["python3", "%SOURCE%"], 'compile': [], 'lang_id': "Python 3"},
+        {'ext': "rs", 'cmd': ["%PROB_NUM%"], 'compile': ["rustc", "--edition", "2021", "--crate-name", "solution", "-O", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "Rust 2021"},
+        {'ext': "java", 'cmd': ["java", "--source", "11", "%SOURCE%"], 'compile': [], 'lang_id': "Java 11"},
+        {'ext': "go", 'cmd': ["%PROB_NUM%"], 'compile': ["go", "build", "-o", "%PROB_NUM%", "%SOURCE%"], 'lang_id': "Go"},
     ],
     }
 
@@ -63,6 +67,9 @@ lang_ids = {
     "Python": 1003,
     "C": 1004,
     "Rust": 1005,
+    "Rust 2021": 113,
+    "Java 11": 93,
+    "Go": 12,
 }
 
 base_dir = environ["HOME"] + "/.boj"
@@ -100,6 +107,11 @@ def load_config():
     for k, v in DEFAULT_CONFIG.items():
         if not k in conf:
             conf[k] = v
+    extensions = {language['ext'] for language in conf['lang']}
+    conf['lang'] = conf['lang'] + [
+        language for language in DEFAULT_CONFIG['lang']
+        if language['ext'] in ('rs', 'java', 'go') and language['ext'] not in extensions
+    ]
     for d in [base_dir, conf['cache_dir'], conf['code_dir']]:
         if not path.isdir(path.expanduser(d)):
             makedirs(path.expanduser(d))

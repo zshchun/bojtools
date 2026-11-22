@@ -123,6 +123,19 @@ def test_generate_code_preserves_existing_source(boj_module, monkeypatch, tmp_pa
     assert "File exists" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("extension", ["rs", "java", "go"])
+def test_generate_code_uses_configured_language_template(boj_module, tmp_path, extension):
+    template = tmp_path / "template.cpp"
+    template.write_text("C++ template", encoding="utf-8")
+    template.with_suffix("." + extension).write_text("Selected template", encoding="utf-8")
+    boj_module.config.conf.update(template=str(template), language=extension)
+
+    boj_module.generate_code(Namespace(pid=1000))
+
+    directory = Path(boj_module.config.conf["code_dir"]) / "1000"
+    assert (directory / f"1000.{extension}").read_text(encoding="utf-8") == "Selected template"
+
+
 def test_async_pick_uses_cache_and_writes_samples(boj_module, cached_problem, request_mocks, capsys):
     asyncio.run(boj_module.async_pick(1000))
 
@@ -226,9 +239,14 @@ def test_drop_testcases_handles_empty_sample_values(boj_module):
 
 @pytest.mark.parametrize("already_cached", [False, True], ids=["download", "cache"])
 @pytest.mark.parametrize("judge_server", ["", "<td><span>BOJ</span></td>"], ids=["old-table", "current-table"])
+@pytest.mark.parametrize(("language", "extension", "language_id"), [
+    ("", "cpp", 1001), ("rs", "rs", 113), ("java", "java", 93), ("go", "go", 12),
+])
 def test_view_solutions_opens_selected_source(
     boj_module, request_mocks, monkeypatch, capsys, already_cached, judge_server,
+    language, extension, language_id,
 ):
+    boj_module.config.conf["language"] = language
     status = f"""
     <html><table id="status-table"><tbody><tr id="solution-42">
       <td>42</td><td>sample-user</td><td>1000</td><td>Accepted</td>
@@ -238,7 +256,7 @@ def test_view_solutions_opens_selected_source(
     </tr></tbody></table></html>
     """
     source = "int main() {}"
-    cache = Path(boj_module.config.conf["cache_dir"]) / "1000" / "42.cpp"
+    cache = Path(boj_module.config.conf["cache_dir"]) / "1000" / f"42.{extension}"
     if already_cached:
         cache.parent.mkdir(parents=True)
         cache.write_text(source, encoding="utf-8")
@@ -253,6 +271,7 @@ def test_view_solutions_opens_selected_source(
 
     boj_module.view_solutions(Namespace(pid=1000))
 
+    assert request_mocks.async_get.await_args_list[0].args[1]["language_id"] == language_id
     assert cache.read_text(encoding="utf-8") == source
     output = capsys.readouterr().out
     assert "123B" in output and "2026-11-22" in output

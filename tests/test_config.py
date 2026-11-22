@@ -26,6 +26,19 @@ def test_config_starts_with_one_copy_of_each_browser_flag(boj_config):
     assert boj_config.conf["browser_args"] == boj_config.def_browser_args
 
 
+def test_load_config_adds_new_languages_and_keeps_custom_entries(boj_config):
+    Path(boj_config.config_path).write_text(
+        '[[lang]]\next = "rs"\nlang_id = "Rust"\ncmd = ["custom"]\n', encoding="utf-8"
+    )
+    boj_config.db.close()
+
+    boj_config.load_config()
+
+    entries = boj_config.conf["lang"]
+    assert [entry["ext"] for entry in entries] == ["rs", "java", "go"]
+    assert entries[0] == {"ext": "rs", "lang_id": "Rust", "cmd": ["custom"]}
+
+
 def test_load_config_merges_defaults_and_restores_state(boj_config):
     saved_state = {"user_agent": "Synthetic browser", "solved_handle": "test-user"}
     state_path = Path(boj_config.conf["state_path"])
