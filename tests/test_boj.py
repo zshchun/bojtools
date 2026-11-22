@@ -225,14 +225,16 @@ def test_drop_testcases_handles_empty_sample_values(boj_module):
 
 
 @pytest.mark.parametrize("already_cached", [False, True], ids=["download", "cache"])
+@pytest.mark.parametrize("judge_server", ["", "<td><span>BOJ</span></td>"], ids=["old-table", "current-table"])
 def test_view_solutions_opens_selected_source(
-    boj_module, request_mocks, monkeypatch, already_cached,
+    boj_module, request_mocks, monkeypatch, capsys, already_cached, judge_server,
 ):
-    status = """
+    status = f"""
     <html><table id="status-table"><tbody><tr id="solution-42">
       <td>42</td><td>sample-user</td><td>1000</td><td>Accepted</td>
       <td>1000<span class="KB-unit"></span></td><td>2<span class="ms-unit"></span></td>
-      <td><a href="/source/42">C++</a></td><td></td><td></td>
+      {judge_server}<td><a href="/source/42">C++</a></td>
+      <td>123<span class="B-unit"></span></td><td><a title="2026-11-22">today</a></td>
     </tr></tbody></table></html>
     """
     source = "int main() {}"
@@ -252,7 +254,32 @@ def test_view_solutions_opens_selected_source(
     boj_module.view_solutions(Namespace(pid=1000))
 
     assert cache.read_text(encoding="utf-8") == source
+    output = capsys.readouterr().out
+    assert "123B" in output and "2026-11-22" in output
     pager.assert_called_once_with(f'{boj_module.config.conf["pager"]} "{cache}"')
     if not already_cached:
         request_mocks.async_get.assert_awaited_with(f"{boj_module.BOJ_HOST}/source/42")
     request_mocks.close_session.assert_awaited_once_with()
+
+
+def test_view_solutions_preserves_problem_filter_on_next_page(boj_module, request_mocks, monkeypatch):
+    request_mocks.async_get.side_effect = [
+        """
+        <html><table id="status-table"><tbody><tr id="solution-42">
+          <td>42</td><td>sample-user</td><td>1000</td><td>Accepted</td>
+          <td>1000<span class="KB-unit"></span></td><td>2<span class="ms-unit"></span></td>
+          <td><span>BOJ</span></td><td><a href="/source/42">C++</a></td><td></td><td></td>
+        </tr></tbody></table>
+        <a id="next_page" href="/status?problem_id=1000&amp;language_id=1001&amp;result_id=4&amp;top=42">Next</a>
+        </html>
+        """,
+        '<html><table id="status-table"></table></html>',
+    ]
+    monkeypatch.setattr("builtins.input", lambda prompt: "n")
+
+    boj_module.view_solutions(Namespace(pid=1000))
+
+    request_mocks.async_get.assert_awaited_with(
+        f"{boj_module.BOJ_HOST}/status",
+        {"problem_id": ["1000"], "language_id": ["1001"], "result_id": ["4"], "top": ["42"]},
+    )

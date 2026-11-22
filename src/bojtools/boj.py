@@ -272,8 +272,11 @@ async def async_view_solutions(args):
             tr = doc.xpath('.//table[@id="status-table"]/tbody/tr[@id]')
             src_cnt = 0
             for row in tr:
-                td = row.xpath('.//td')
-                code_url = td[6].xpath('a[@href]')
+                td = row.xpath('./td')
+                if len(td) not in (9, 10):
+                    continue
+                lang, size, submitted_at = td[-3:]
+                code_url = lang.xpath('a[@href]')
                 if len(code_url) == 0: continue
                 src_cnt += 1
                 submit_id = td[0].text
@@ -291,12 +294,12 @@ async def async_view_solutions(args):
                 prog_time = td[5].text + td[5].xpath('.//span[@class]')[0].get('class').split('-')[0]
                 lang_type = code_url[0].text
                 code_url = BOJ_HOST + code_url[0].get('href')
-                if len(td[7]):
-                    code_size = td[7].text + td[7].xpath('.//span[@class]')[0].get('class').split('-')[0]
+                if len(size):
+                    code_size = size.text + size.xpath('.//span[@class]')[0].get('class').split('-')[0]
                 else:
                     code_size = ""
-                if len(td[8]):
-                    submit_time = td[8].xpath('.//a[@title]')[0].get('title')
+                if len(submitted_at):
+                    submit_time = submitted_at.xpath('.//a[@title]')[0].get('title')
                 else:
                     submit_time = ""
                 print("{:9s} {} {:6s} {:6s} {:6s} {:5s} {}".format(
@@ -319,8 +322,7 @@ async def async_view_solutions(args):
                 break
             next_url = doc.xpath(".//a[@id='next_page']")
             if not next_url: break
-            params = parse_qs(next_url[0].get('href'))
-            # url = BOJ_HOST + next_url[0].get('href')
+            params = parse_qs(urlparse(next_url[0].get('href')).query)
     finally:
         await _http.close_session()
 
