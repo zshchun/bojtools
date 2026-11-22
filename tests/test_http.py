@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock, call
 
 import pytest
+from yarl import URL
 
 
 @pytest.fixture
@@ -27,8 +28,8 @@ def _async_context(value):
     return context
 
 
-def _http_response(status, body):
-    return _async_context(SimpleNamespace(status=status, text=AsyncMock(return_value=body)))
+def _http_response(status, body, headers=None):
+    return _async_context(SimpleNamespace(status=status, text=AsyncMock(return_value=body), headers=headers or {}))
 
 
 def test_add_header_updates_supplied_headers(http):
@@ -141,6 +142,21 @@ def test_async_get_retries_boj_403_once_after_session_refresh(http, monkeypatch)
     second_response.__aexit__.assert_awaited_once()
 
 
+@pytest.mark.parametrize('method', ['get', 'post'])
+def test_http_browser_verification_is_reported_without_refresh(http, monkeypatch, method):
+    url = http.BOJ_HOST + '/problem/1000'
+    response = _http_response(403, 'verify in browser', {'cf-mitigated': 'challenge'})
+    request = Mock(return_value=response)
+    monkeypatch.setattr(http, 'session', SimpleNamespace(**{method: request}))
+
+    with pytest.raises(RuntimeError, match='Browser verification required'):
+        asyncio.run(getattr(http, f'async_{method}')(url))
+
+    request.assert_called_once()
+    http.login.refresh_cookie.assert_not_awaited()
+    response.__aexit__.assert_awaited_once()
+
+
 def test_async_post_forwards_form_and_returns_response_body(http, monkeypatch):
     url = http.SOLVED_HOST + '/example'
     data = {'name': 'sample'}
@@ -186,7 +202,7 @@ def test_set_cookie_restores_synthetic_browser_cookie_attributes(http, boj_confi
                     'name': 'example_session',
                     'value': 'test-value',
                     'path': '/example',
-                    'domain': '.example.invalid',
+                    'domain': '.acmicpc.net',
                     'expires': 2145916800,
                     'secure': True,
                     'httpOnly': True,
@@ -201,12 +217,31 @@ def test_set_cookie_restores_synthetic_browser_cookie_attributes(http, boj_confi
 
     cookie, = list(http.cookie_jar)
     assert (cookie.key, cookie.value) == ('example_session', 'test-value')
-    assert cookie['domain'] == 'example.invalid'
+    assert cookie['domain'] == 'acmicpc.net'
     assert cookie['path'] == '/example'
     assert cookie['expires'] == 'Fri, 01 Jan 2038 00:00:00 GMT'
     assert cookie['secure'] is True
     assert cookie['httponly'] is True
     assert cookie['samesite'] == 'Lax'
+
+
+def test_set_cookie_keeps_host_session_cookie_and_skips_protection_cookies(http, boj_config):
+    def cookie(name, domain, expires=-1):
+        return {'name': name, 'value': 'test', 'domain': domain, 'path': '/', 'expires': expires}
+
+    boj_config.state['cookies'] = [
+        cookie('example_session', 'www.acmicpc.net'),
+        cookie('cf_clearance', '.acmicpc.net', expires=2145916800),
+        cookie('__cf_bm', '.acmicpc.net'),
+        cookie('unrelated', 'example.invalid'),
+    ]
+    asyncio.run(http.set_cookie())
+
+    saved, = list(http.cookie_jar)
+    assert saved.key == 'example_session'
+    assert not saved['expires']
+    assert 'example_session' in http.cookie_jar.filter_cookies(URL('https://www.acmicpc.net/'))
+    assert not http.cookie_jar.filter_cookies(URL('https://sub.www.acmicpc.net/'))
 
 
 def test_open_session_reuses_client_and_cookie_jar_until_close(http, monkeypatch):

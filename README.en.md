@@ -34,11 +34,10 @@ Generated file:
 
 ## `boj login`
 - Signs in to Baekjoon and solved.ac through solved.ac's "Sign in with BOJ" button.
-- A browser is required (chromium, google-chrome, ...).
+- Patchright launches the configured `browser` or an installed Chrome/Chromium. If none is detected, install Chromium with `patchright install chromium`.
 - Enter your BOJ credentials, then complete any additional verification shown in the browser.
-- Login cookies are saved to `state_path`.
-  - Default: `~/.boj/state.json`
-- If an older browser cookie file causes a `same_party` error during refresh, the cookies are reset. Run `boj login` again if you need a signed-in session.
+- The app clicks "Sign in with BOJ" once its handler is ready, then automatically clicks the "Log in" link or button on the BOJ SSO approval page after BOJ sign-in.
+- If the browser state file is absent, the app restores login cookies from `state_path`. If the session has expired, run `boj login`.
 
 ```sh
 boj login
@@ -186,10 +185,10 @@ boj i -l <number>
 
 ## Running Tests
 
-Run from the repository root. Tests use temporary directories and mock HTTP and browser calls.
+Run from the repository root in an environment with the project and pytest installed. Tests use temporary directories and mock HTTP and browser calls.
 
 ```sh
-uv run --group test pytest
+pytest
 ```
 
 ## Configuration Path

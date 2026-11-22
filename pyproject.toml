@@ -1,13 +1,13 @@
 [project]
 name = "bojtools"
-version = "0.7.2"
+version = "0.7.3"
 description = "Baekjoon Online Judge CLI tools"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "aiohttp>=3.13.3",
     "lxml>=6.0.2",
-    "nodriver>=0.48.1",
+    "patchright>=1.60.1",
     "tomli>=2.4.0",
     "tomli-w>=1.2.0",
 ]

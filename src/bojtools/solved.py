@@ -71,7 +71,7 @@ def solved_headers():
     if not any(cookie.get('name') == 'solvedacToken'
                for cookie in getattr(config, 'state', {}).get('cookies', [])):
         raise ValueError('Log in to solved.ac with boj login first')
-    return _http.json_headers
+    return {**_http.json_headers, 'Referer': f'{SOLVED_HOST}/ko/problems'}
 
 
 def unsolved_filter():
@@ -84,11 +84,15 @@ def unsolved_filter():
 
 
 async def async_get_solved(url, params):
+    if parse.urlsplit(url)[:2] != parse.urlsplit(SOLVED_HOST)[:2]:
+        raise ValueError('The solved.ac request must use the solved.ac origin')
     resp = await _http.async_get(url, params, solved_headers())
     try:
         page = json.loads(resp)
     except json.JSONDecodeError as error:
-        raise RuntimeError('solved.ac returned a non-JSON response; refresh the browser login cookies') from error
+        raise RuntimeError(
+            'solved.ac returned a non-JSON response; run boj login again'
+        ) from error
     if 'error' in page:
         raise RuntimeError(f"solved.ac API: {page['error']['code']}: {page['error']['message']}")
     if page.get('diagnostics'):

@@ -68,6 +68,7 @@ def boj_config(_config_module, monkeypatch, tmp_path):
     monkeypatch.setattr(config, "conf", {})
     monkeypatch.setattr(config, "state", {}, raising=False)
     monkeypatch.setattr(config, "state_path", defaults["state_path"])
+    monkeypatch.setattr(config, "browser_state_path", None)
     monkeypatch.setattr(config, "db", None)
     config.load_config()
     try:

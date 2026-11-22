@@ -1,30 +1,24 @@
 import asyncio
 from argparse import Namespace
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, call, mock_open
+from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 from aiohttp import ClientError
-
-
-class SubmitTab(SimpleNamespace):
-    def __await__(self):
-        return iter(())
+from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
 
 @pytest.fixture
-def submit_module(boj_config, monkeypatch):
+def submit_module(boj_config):
     from bojtools import submit
 
-    for name in ("pid", "ext", "filename", "_evt"):
-        monkeypatch.setattr(submit, name, None, raising=False)
     return submit
 
 
 def test_submit_runs_submit_coroutine(submit_module, monkeypatch):
     handler = AsyncMock()
     monkeypatch.setattr(submit_module, "async_submit", handler)
-    monkeypatch.setattr(submit_module.uc, "loop", lambda: SimpleNamespace(run_until_complete=asyncio.run))
     args = object()
 
     submit_module.submit(args)
@@ -47,7 +41,7 @@ def test_async_submit_rejects_bad_input(
     monkeypatch.setattr(submit_module, "guess_pid", lambda args: pid)
     monkeypatch.setattr(submit_module, "select_source_code", Mock(return_value=None))
     submit_in_browser = AsyncMock()
-    monkeypatch.setattr(submit_module, "async_nodriver_submit", submit_in_browser)
+    monkeypatch.setattr(submit_module, "async_playwright_submit", submit_in_browser)
     filename = str(tmp_path / filename) if filename else None
 
     asyncio.run(submit_module.async_submit(Namespace(pid=pid, input=filename)))
@@ -57,15 +51,15 @@ def test_async_submit_rejects_bad_input(
 
 
 @pytest.mark.parametrize("explicit_filename", [True, False])
-def test_async_submit_dispatches_normalized_problem_and_language(
-    submit_module, boj_config, monkeypatch, tmp_path, explicit_filename
+def test_async_submit_dispatches_normalized_problem_and_source(
+    submit_module, monkeypatch, tmp_path, explicit_filename
 ):
     source = tmp_path / "main.py"
     source.write_text("print(42)\n")
     select_source = Mock(return_value=str(source))
     submit_in_browser = AsyncMock()
     monkeypatch.setattr(submit_module, "select_source_code", select_source)
-    monkeypatch.setattr(submit_module, "async_nodriver_submit", submit_in_browser)
+    monkeypatch.setattr(submit_module, "async_playwright_submit", submit_in_browser)
     args = Namespace(pid=1000, input=str(source) if explicit_filename else None)
 
     asyncio.run(submit_module.async_submit(args))
@@ -75,26 +69,8 @@ def test_async_submit_dispatches_normalized_problem_and_language(
     else:
         select_source.assert_called_once_with(1000)
     submit_in_browser.assert_awaited_once_with(
-        "https://www.acmicpc.net/submit/1000",
-        {"problem_id": "1000", "language": "28", "code_open": boj_config.conf["code_open"]},
-        1000,
+        "https://www.acmicpc.net/submit/1000", str(source), 1000
     )
-
-
-@pytest.mark.parametrize("error", [None, ConnectionError, AttributeError, TimeoutError])
-def test_is_tab_opened_detects_evaluation_failure(submit_module, error):
-    evaluate = AsyncMock(side_effect=error)
-
-    assert asyncio.run(submit_module.is_tab_opened(SimpleNamespace(evaluate=evaluate))) is (error is None)
-    evaluate.assert_awaited_once_with(expression="true")
-
-
-def test_response_handler_records_event(submit_module):
-    event = object()
-
-    asyncio.run(submit_module.resp_handler(event))
-
-    assert submit_module._evt is event
 
 
 def status_page(result_code, *, status="Accepted", problem_id=1000):
@@ -187,75 +163,229 @@ def test_display_submit_result_formats_judge_update(submit_module, monkeypatch, 
         assert "42ms" in message
 
 
-@pytest.mark.parametrize("outcome", [True, False, ClientError, TimeoutError])
-def test_browser_submission_retains_tab_for_inspection_only_when_needed(
-    submit_module, boj_config, monkeypatch, capsys, outcome
-):
-    source = mock_open(read_data="def example():\n\tpass\n")
-    submit_module.filename = "main.py"
-    monkeypatch.setattr(submit_module, "open", source, raising=False)
-    button = SimpleNamespace(attributes=[], click=AsyncMock())
-    editor = SimpleNamespace(send_keys=AsyncMock())
-    tab = SubmitTab(
-        select=AsyncMock(side_effect=[button, editor]),
-        send=AsyncMock(),
-        sleep=AsyncMock(),
-        wait_for=AsyncMock(),
-        get_content=AsyncMock(return_value="<html></html>"),
-        close=AsyncMock(),
+@pytest.fixture
+def browser_submission(submit_module, monkeypatch, tmp_path):
+    url = "https://www.acmicpc.net/submit/1000"
+    source = tmp_path / "main.py"
+    source.write_text("def example():\n\tpass\n")
+    button = SimpleNamespace(wait_for=AsyncMock(), click=AsyncMock())
+    editor = SimpleNamespace(wait_for=AsyncMock(), evaluate=AsyncMock())
+    result = SimpleNamespace(wait_for=AsyncMock())
+    locators = {
+        "#submit_button": button,
+        "div.CodeMirror": editor,
+        "#status-table:visible, .alert-body:visible": SimpleNamespace(first=result),
+    }
+    page = SimpleNamespace(
+        goto=AsyncMock(),
+        locator=Mock(side_effect=locators.__getitem__),
+        content=AsyncMock(return_value="<html></html>"),
+        wait_for_event=AsyncMock(),
         closed=False,
+        url=url,
     )
-    other_tab = SimpleNamespace(close=AsyncMock(), closed=False)
-    browser = SimpleNamespace(
-        get=AsyncMock(return_value=tab),
-        tabs=[tab, other_tab],
-        cookies=SimpleNamespace(load=AsyncMock()),
-    )
-    start = AsyncMock(return_value=browser)
-    wait_for_result = (
-        AsyncMock(side_effect=outcome) if isinstance(outcome, type) else AsyncMock(return_value=outcome)
-    )
+    page.is_closed = lambda: page.closed
+    page_exited = Mock()
+
+    @asynccontextmanager
+    async def open_page(**options):
+        try:
+            yield page
+        finally:
+            page_exited()
+
+    browser_page = Mock(side_effect=open_page)
+    wait_for_result = AsyncMock()
     close_session = AsyncMock()
-
-    async def wait(_delay):
-        assert sleep.await_count <= 4, "Submission exceeded the expected number of waits"
-        if close_session.await_count and outcome is not True:
-            # Once result handling ends, simulate the user closing the tab on the first poll.
-            tab.close.assert_not_awaited()
-            tab.closed = True
-
-    sleep = AsyncMock(side_effect=wait)
-    monkeypatch.setattr(submit_module.uc, "start", start)
+    monkeypatch.setattr(submit_module, "browser_page", browser_page)
     monkeypatch.setattr(submit_module, "wait_for_status", wait_for_result)
     monkeypatch.setattr(submit_module._http, "close_session", close_session)
-    monkeypatch.setattr(submit_module, "asyncio", SimpleNamespace(sleep=sleep, TimeoutError=TimeoutError))
-    url = "https://www.acmicpc.net/submit/1000"
+    return SimpleNamespace(
+        url=url, source=str(source), browser_page=browser_page, page=page, page_exited=page_exited,
+        button=button, editor=editor, result=result, wait_for_result=wait_for_result,
+        close_session=close_session,
+    )
 
-    asyncio.run(submit_module.async_nodriver_submit(url, {}, 1000))
 
-    assert start.await_args.kwargs["headless"] is False
-    source.assert_called_once_with("main.py", "r")
-    browser.cookies.load.assert_awaited_once_with(boj_config.conf["browser_cookies"])
-    browser.get.assert_awaited_once_with(url)
-    assert tab.select.await_args_list == [
-        call("#submit_button", timeout=1),
-        call("div.CodeMirror.cm-s-default div textarea"),
-    ]
-    tab.wait_for.assert_awaited_once_with("#status-table, .alert-body", timeout=1)
-    indentation = " " * boj_config.conf["tab_width"]
-    editor.send_keys.assert_awaited_once_with(f"def example():\r{indentation}pass\r")
-    button.click.assert_awaited_once()
-    wait_for_result.assert_awaited_once_with("<html></html>", 1000)
-    close_session.assert_awaited_once()
-    other_tab.close.assert_awaited_once()
-    stdout = capsys.readouterr().out
-    if outcome is True:
-        assert call(10) in sleep.await_args_list
-        assert "close the tab when done" not in stdout
-        tab.close.assert_awaited_once()
+@pytest.mark.parametrize("outcome", [True, False, ClientError, TimeoutError])
+def test_browser_submission_retains_tab_for_inspection_only_when_needed(
+    submit_module, boj_config, browser_submission, capsys, outcome
+):
+    flow = browser_submission
+    if isinstance(outcome, type):
+        flow.wait_for_result.side_effect = outcome
     else:
-        assert tab.closed
+        flow.wait_for_result.return_value = outcome
+
+    async def wait_for_close(event, *, timeout):
+        assert event == "close"
+        if flow.page.wait_for_event.await_count == 1:
+            assert timeout == 0  # While the status and browser close compete.
+            await asyncio.Future()
+        else:
+            assert flow.page.wait_for_event.await_count == 2
+            if timeout == 10_000:
+                raise PlaywrightTimeoutError("grace period elapsed")
+            assert timeout == 0
+            flow.page.closed = True
+
+    flow.page.wait_for_event.side_effect = wait_for_close
+    asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000))
+
+    flow.browser_page.assert_called_once_with(headless=False, restore=True)
+    flow.page.goto.assert_awaited_once_with(flow.url, wait_until="domcontentloaded")
+    flow.button.wait_for.assert_awaited_once_with(state="visible", timeout=300_000)
+    flow.editor.wait_for.assert_awaited_once_with(state="visible", timeout=10_000)
+    indentation = " " * boj_config.conf["tab_width"]
+    flow.editor.evaluate.assert_awaited_once_with(
+        "(element, source) => element.CodeMirror.setValue(source)",
+        f"def example():\n{indentation}pass\n",
+        isolated_context=False,
+    )
+    flow.button.click.assert_awaited_once_with(timeout=300_000)
+    flow.result.wait_for.assert_awaited_once_with(state="visible", timeout=10_000)
+    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000)
+    flow.close_session.assert_awaited_once()
+    flow.page_exited.assert_called_once()
+    stdout = capsys.readouterr().out
+    assert "Complete any browser verification" in stdout
+    assert flow.page.wait_for_event.await_args_list == [
+        call("close", timeout=0), call("close", timeout=10_000 if outcome is True else 0),
+    ]
+    if outcome is True:
+        assert "close the tab when done" not in stdout
+    else:
+        assert flow.page.closed
         assert "close the tab when done" in stdout
-        tab.close.assert_not_awaited()
     if isinstance(outcome, type):
         assert "Could not receive the BOJ judging result" in stdout
+
+
+def test_submission_timeout_leaves_browser_available(submit_module, browser_submission, capsys):
+    flow = browser_submission
+    flow.button.wait_for.side_effect = PlaywrightTimeoutError("form readiness timed out")
+
+    asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000))
+
+    flow.button.click.assert_not_awaited()
+    flow.wait_for_result.assert_not_awaited()
+    flow.close_session.assert_not_awaited()
+    flow.page.wait_for_event.assert_awaited_once_with("close", timeout=0)
+    flow.page_exited.assert_called_once()
+    stdout = capsys.readouterr().out
+    assert "Could not complete the BOJ submission" in stdout
+    assert "close the tab when done" in stdout
+
+
+@pytest.mark.parametrize("redirect", [
+    "https://acmicpc.net/submit/1000",
+    "https://acmicpc.net:443/submit/1000",
+    "https://www.acmicpc.net:443/submit/1000",
+])
+def test_canonical_boj_redirect_submits(submit_module, browser_submission, redirect):
+    flow = browser_submission
+    flow.page.url = redirect
+    flow.wait_for_result.return_value = True
+
+    async def wait_for_close(event, *, timeout):
+        if timeout == 0:
+            await asyncio.Future()
+        raise PlaywrightTimeoutError("grace period elapsed")
+
+    flow.page.wait_for_event.side_effect = wait_for_close
+    asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000))
+
+    flow.editor.evaluate.assert_awaited_once()
+    flow.button.click.assert_awaited_once_with(timeout=300_000)
+    flow.wait_for_result.assert_awaited_once_with("<html></html>", 1000)
+    flow.page_exited.assert_called_once()
+
+
+@pytest.mark.parametrize("redirect", [
+    "https://example.invalid/submit/1000",
+    "https://acmicpc.net.example.invalid/submit/1000",
+    "http://acmicpc.net/submit/1000",
+    "https://acmicpc.net:8443/submit/1000",
+    "https://www.acmicpc.net/submit/1001",
+    "https://www.acmicpc.net/login",
+])
+def test_unexpected_redirect_does_not_fill_editor(submit_module, browser_submission, capsys, redirect):
+    flow = browser_submission
+    flow.page.url = redirect
+
+    asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000))
+
+    flow.editor.evaluate.assert_not_awaited()
+    flow.button.click.assert_not_awaited()
+    flow.page_exited.assert_called_once()
+    assert "unexpected site" in capsys.readouterr().out
+
+
+def test_browser_close_before_waiter_starts_cancels_judging(submit_module, browser_submission):
+    flow = browser_submission
+    cancelled = Mock()
+
+    async def wait_for_result(*args):
+        try:
+            await asyncio.Future()
+        finally:
+            cancelled()
+
+    async def run():
+        close_listener = None
+
+        async def wait_for_close(event, *, timeout):
+            nonlocal close_listener
+            close_listener = asyncio.get_running_loop().create_future()
+            await close_listener
+
+        def close_page():
+            flow.page.closed = True
+            if close_listener is not None:
+                close_listener.set_result(None)
+
+        flow.wait_for_result.side_effect = wait_for_result
+        flow.page.wait_for_event.side_effect = wait_for_close
+
+        async def close_during_result_wait():
+            asyncio.get_running_loop().call_soon(close_page)
+            return await submit_module._wait_for_result(flow.page, "<html></html>", 1000)
+
+        return await asyncio.wait_for(close_during_result_wait(), timeout=1)
+
+    assert asyncio.run(run()) is False
+    assert flow.page.closed
+    cancelled.assert_called_once()
+    flow.close_session.assert_awaited_once()
+
+
+def test_browser_close_cancels_pending_judging_result(submit_module, browser_submission):
+    flow = browser_submission
+    cancelled = Mock()
+
+    async def submit_and_close():
+        judging_started = asyncio.Event()
+
+        async def wait_for_result(*args):
+            judging_started.set()
+            try:
+                await asyncio.Future()
+            finally:
+                cancelled()
+
+        async def wait_for_close(event, *, timeout):
+            assert event == "close"
+            assert timeout == 0
+            await judging_started.wait()
+            flow.page.closed = True
+
+        flow.wait_for_result.side_effect = wait_for_result
+        flow.page.wait_for_event.side_effect = wait_for_close
+        await asyncio.wait_for(submit_module.async_playwright_submit(flow.url, flow.source, 1000), timeout=1)
+
+    asyncio.run(submit_and_close())
+
+    cancelled.assert_called_once()
+    flow.page.wait_for_event.assert_awaited_once()
+    flow.close_session.assert_awaited_once()
+    flow.page_exited.assert_called_once()

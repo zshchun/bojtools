@@ -34,11 +34,10 @@ boj init
 
 ## `boj login`
 - solved.ac의 "BOJ로 로그인"을 통해 baekjoon, solved.ac에 로그인합니다.
-- 브라우저가 필요합니다.  (chromium, google-chrome, ...)
+- Patchright가 설정의 `browser` 또는 설치된 Chrome/Chromium을 실행합니다. 브라우저를 찾지 못하면 `patchright install chromium`으로 Chromium을 설치하세요.
 - BOJ 계정 정보를 입력하면 브라우저가 실행됩니다. 브라우저에서 추가 인증이 표시되면 완료해 주세요.
-- login cookie는 `state_path`에 저장됩니다.
-  - Default: `~/.boj/state.json`
-- 브라우저 쿠키 갱신 중 이전 형식의 쿠키에서 `same_party` 오류가 나면 쿠키를 초기화합니다. 로그인 세션이 필요하면 `boj login`을 다시 실행하세요.
+- "BOJ로 로그인" 버튼이 준비되면 자동 클릭하고, BOJ 로그인 후 SSO 승인 화면의 "로그인" 링크나 버튼도 자동 클릭합니다.
+- 브라우저 상태 파일이 없으면 `state_path`의 로그인 쿠키를 복원합니다. 세션이 만료됐다면 `boj login`을 실행하세요.
 
 ```sh
 boj login
@@ -189,10 +188,10 @@ boj i -l <번호>
 
 ## 개발 테스트
 
-저장소 루트에서 실행합니다. 테스트는 임시 디렉터리와 모의 HTTP·브라우저를 사용합니다.
+프로젝트와 pytest를 설치한 환경에서 저장소 루트에서 실행합니다. 테스트는 임시 디렉터리와 모의 HTTP·브라우저를 사용합니다.
 
 ```sh
-uv run --group test pytest
+pytest
 ```
 
 ## 환경설정 경로

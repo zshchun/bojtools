@@ -1,192 +1,116 @@
-from . import config
-from . import _http
-from .ui import *
-from .util import *
-from aiohttp import ClientError
-from lxml import etree, html
-from urllib.parse import quote_plus
-import nodriver as uc
-import re
-import time
-import random
 import asyncio
+import re
+from os import path
+from urllib.parse import urlsplit
+
+from aiohttp import ClientError
+from lxml import html
+from patchright.async_api import Error as PlaywrightError
+from patchright.async_api import TimeoutError as PlaywrightTimeoutError
+
+from . import _http, config
+from ._browser import browser_page
+from .constants import BOJ_HOST
+from .ui import BLUE, BWHITE, GREEN, RED, redraw
+from .util import guess_pid, select_source_code
 
 ws_url = 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false'
 
 
 def submit(args):
-    uc.loop().run_until_complete(async_submit(args))
-#    return asyncio.run(async_submit(args))
+    return asyncio.run(async_submit(args))
+
 
 async def async_submit(args):
-    global pid, ext, filename
     pid = guess_pid(args)
     if not pid:
         print("[!] Invalid problem ID")
         return
-    if args.input:
-        filename = args.input
-    else:
-        filename = select_source_code(pid)
 
-    if not filename:
-        print("[!] Failed to select a file : {}".format(filename))
-        return
-
+    filename = args.input or select_source_code(pid)
     if not filename:
         print("[!] Failed to select a file : {}".format(filename))
         return
 
     ext = path.splitext(filename)[1].lstrip('.')
     lang = [x['lang_id'] for x in config.conf['lang'] if x['ext'] == ext]
-    if not lang or not lang[0] in config.lang_ids:
+    if not lang or lang[0] not in config.lang_ids:
         print("[!] Unknown file extension")
         return
 
-    lang_id = config.lang_ids[lang[0]]
     if not path.isfile(filename):
         print("[!] File not found : {}".format(filename))
         return
 
-    url = f'https://www.acmicpc.net/submit/{pid}'
-    submit_form = {
-        'problem_id': str(pid),
-        'language': str(lang_id),
-        'code_open': config.conf['code_open'],
-    }
-    await async_nodriver_submit(url, submit_form, pid)
+    await async_playwright_submit(f'{BOJ_HOST}/submit/{pid}', filename, pid)
 
 
-async def is_tab_opened(tab):
-    try:
-        isopen = await asyncio.wait_for(tab.evaluate(expression="true"), timeout=1)
-        return True
-    except (ConnectionRefusedError, ConnectionError, AttributeError, asyncio.TimeoutError):
+async def async_playwright_submit(url, filename, pid):
+    with open(filename, 'r') as source:
+        source_code = source.read().replace('\t', ' ' * config.conf['tab_width'])
+
+    async with browser_page(headless=False, restore=True) as page:
+        finished = False
+        try:
+            print('Complete any browser verification if prompted.')
+            await page.goto(url, wait_until='domcontentloaded')
+            button = page.locator('#submit_button')
+            await button.wait_for(state='visible', timeout=300_000)
+            destination = urlsplit(page.url)
+            if (destination.scheme != 'https'
+                    or destination.hostname not in ('acmicpc.net', 'www.acmicpc.net')
+                    or destination.port not in (None, 443)
+                    or destination.path != urlsplit(url).path):
+                print('[!] The submission page opened on an unexpected site.')
+                return
+
+            # CodeMirror's editor API updates the document used by the normal form submit.
+            editor = page.locator('div.CodeMirror')
+            await editor.wait_for(state='visible', timeout=10_000)
+            # The page attaches CodeMirror in its main JavaScript context.
+            await editor.evaluate(
+                '(element, source) => element.CodeMirror.setValue(source)', source_code,
+                isolated_context=False,
+            )
+            await button.click(timeout=300_000)
+            result = page.locator('#status-table:visible, .alert-body:visible').first
+            await result.wait_for(state='visible', timeout=10_000)
+            finished = await _wait_for_result(page, await page.content(), pid)
+        except PlaywrightError:
+            if not page.is_closed():
+                print('[!] Could not complete the BOJ submission in the browser.')
+        except (ClientError, asyncio.TimeoutError, TimeoutError) as error:
+            print(f'[!] Could not receive the BOJ judging result: {error}')
+
+        if not page.is_closed():
+            if not finished:
+                print('[!] Check the BOJ page and close the tab when done.')
+            try:
+                await page.wait_for_event('close', timeout=10_000 if finished else 0)
+            except PlaywrightTimeoutError:
+                pass
+
+
+async def _wait_for_result(page, content, pid):
+    if page.is_closed():
         return False
 
+    async def wait_for_close():
+        # The page may close before this scheduled task starts listening.
+        if not page.is_closed():
+            await page.wait_for_event('close', timeout=0)
 
-async def async_nodriver_submit(url, submit_form, pid):
-    global _evt
-    _evt = None
-    source_code = open(filename, 'r').read()
-    source_code = source_code.replace('\t', ' ' * config.conf['tab_width'])
-    browser = await uc.start(headless=False,
-                             browser_executable_path=config.conf['browser'],
-                             browser_args=config.conf['browser_args'],
-                             lang=config.conf['locale'],)
-    await browser.cookies.load(config.conf['browser_cookies'])
-#    tab = browser.main_tab
-#    tab.add_handler(uc.cdp.network.ResponseReceived, resp_handler)
-
-    tab = await browser.get(url)
-    await asyncio.sleep(1)
-    await tab
-#    await tab.select('#content')
-#    await tab.scroll_down(30)
-    while True:
-        await asyncio.sleep(0.25)
-        for i in range(20):
-            try:
-                btn = await tab.select("#submit_button", timeout = 1)
-                attr = btn.attributes
-                break
-            except (uc.core.connection.ProtocolException, TimeoutError):
-                pass
-        visible = True
-        for i in range(0, len(attr), 2):
-            if attr[i] == 'style' and attr[i+1] == 'display: none;':
-                visible = False
-                break
-        if visible: break
-
-    element = await tab.select("div.CodeMirror.cm-s-default div textarea")
-    source_code = source_code.replace('\n', '\r')
-    await element.send_keys(source_code)
-    [await tab.send(uc.cdp.input_.dispatch_key_event("rawKeyDown", windows_virtual_key_code=46)) for i in range(100)]
-#    js = "(item) => { item.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); }"
-#    await element.apply(js)
-    #element = await tab.select("#cf-chl-widget-n5woi") # submit, "#submit_form > div:nth-child(7) > div > div"
-
-    await tab.sleep(5)
-    await btn.click()
-    await tab
-    await asyncio.sleep(1)
-    for i in range(10):
-        try:
-            await tab.wait_for('#status-table, .alert-body', timeout=1)
-            break
-        except (uc.core.connection.ProtocolException, TimeoutError):
-            pass
-#    elems = await tab.select_all('#status-table > tbody:nth-child(2) > tr')
-#    sids = []
-#    for elem in elems:
-#        attr = elem.attributes
-#        for i in range(0, len(attr), 2):
-#            if attr[i] == 'id':
-#                sid = attr[i+1].split('-')[1]
-#                sids.append(sid)
-#    sid = sids[0]
-
-#    while await is_tab_opened(tab):
-#        print(browser._process)
-#        print(browser.connection)
-#        time.sleep(0.5)
-#    for t in browser.tabs:
-#        if hasattr(t, 'close'):
-#            await t.close()
-#    browser.stop()
-#    if not await is_tab_opened(tab):
-#        return
-
+    result = asyncio.create_task(wait_for_status(content, pid))
+    tab_closed = asyncio.create_task(wait_for_close())
     try:
-        finished = await wait_for_status(await tab.get_content(), pid)
-    except (ClientError, asyncio.TimeoutError) as error:
-        print(f'[!] Could not receive the BOJ judging result: {error}')
-        finished = False
+        done, _ = await asyncio.wait((result, tab_closed), return_when=asyncio.FIRST_COMPLETED)
+        return result.result() if result in done else False
     finally:
+        for task in (result, tab_closed):
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(result, tab_closed, return_exceptions=True)
         await _http.close_session()
-    if finished:
-        await asyncio.sleep(10)
-    elif not tab.closed:
-        print('[!] Check the BOJ page and close the tab when done.')
-        while not tab.closed:
-            await asyncio.sleep(0.5)
-
-    for t in browser.tabs:
-        if not t.closed:
-            await t.close()
-#    browser.stop()
-
-#    if _evt.response.status != 200:
-#        raise Exception("The submit request failed")
-#    body, b64 = await tab.send(uc.cdp.network.get_response_body(_evt.request_id))
-
-
-async def resp_handler(event: uc.cdp.network.ResponseReceived):
-    global _evt
-    #if event.response.encoded_data_length > 0:
-    _evt = event
-
-
-# async def async_aiohttp_submit(url, params, submit_form, pid):
-#     # print(GREEN("[+] Submit {} ({}, {})".format(filename, lang[0], lang_id)))
-#     await _http.open_boj()
-#     try:
-#         resp = await _http.async_get(url, params)
-#         doc = html.fromstring(resp)
-#         csrf = doc.xpath('.//input[@type="hidden" and @name="csrf_key"]')[0].get("value")
-#         form = aiohttp.FormData()
-#         for k, v in submit_form.items():
-#             form.add_field(k, v)
-#         form.add_field('csrf_key', csrf)
-#         tab_width = config.conf['tab_width']
-#         source_code = open(filename, 'r').read()
-#         source_code = source_code.replace('\t', ' ' * tab_width)
-#         form.add_field('source', source_code)
-#         resp = await _http.async_post(url, params, form)
-#         await wait_for_status(resp, pid)
-#     finally:
-#         await _http.close_boj()
 
 
 async def wait_for_status(resp, pid):

@@ -6,6 +6,7 @@ from .constants import *
 from http.cookies import Morsel
 from datetime import datetime, timezone
 from os import path
+from yarl import URL
 import asyncio
 import aiohttp
 import json
@@ -68,6 +69,11 @@ def wait_req_delay():
         time.sleep(prev_req_time + req_delay - time.time())
 
 
+def _require_no_browser_challenge(headers):
+    if headers.get('cf-mitigated', '').strip().lower() == 'challenge':
+        raise RuntimeError('Browser verification required. Open the page in a browser to continue.')
+
+
 async def async_get(url, params={}, headers=None):
     if headers == None: headers = default_headers
     target = ''
@@ -82,12 +88,14 @@ async def async_get(url, params={}, headers=None):
 
     wait_req_delay()
     async with session.get(url, params=params, headers=headers) as response:
+        _require_no_browser_challenge(response.headers)
         if target != 'boj' or response.status != 403:
             return await response.text()
 
     await login.refresh_cookie(url)
     await asyncio.sleep(1)
     async with session.get(url, params=params, headers=headers) as response:
+        _require_no_browser_challenge(response.headers)
         return await response.text()
 
 
@@ -99,6 +107,7 @@ async def async_post(url, params={}, data={}, headers=None):
     result = None
     wait_req_delay()
     async with session.post(url, params=params, headers=headers, data=data) as response:
+        _require_no_browser_challenge(response.headers)
         return await response.text()
 
 def urlsopen(urls):
@@ -121,11 +130,16 @@ async def set_cookie():
         print(YELLOW("Please log in first. ") + WHITE("(boj login)"))
         return
     for c in config.state['cookies']:
+        domain = c['domain'].lstrip('.').lower()
+        if (c['name'].lower() in CLOUDFLARE_COOKIE_NAMES
+                or domain not in ('acmicpc.net', 'www.acmicpc.net', 'solved.ac')):
+            continue
         morsel = Morsel()
         morsel.set(c['name'], c['value'], c['value'])
         morsel['path'] = c['path']
-        morsel['domain'] = c['domain']
-        if 'expires' in c:
+        if c['domain'].startswith('.'):
+            morsel['domain'] = domain
+        if c.get('expires', -1) >= 0:
             t = datetime.fromtimestamp(c['expires'], tz=timezone.utc)
             morsel['expires'] = t.strftime("%a, %d %b %Y %H:%M:%S GMT")
         if 'secure' in c:
@@ -134,7 +148,7 @@ async def set_cookie():
             morsel['httponly'] = c['httpOnly']
         if 'sameSite' in c and c['sameSite']:
             morsel['samesite'] = c['sameSite']
-        cookie_jar.update_cookies({morsel.key : morsel})
+        cookie_jar.update_cookies({morsel.key: morsel}, URL.build(scheme='https', host=domain))
 
 
 

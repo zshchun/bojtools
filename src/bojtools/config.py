@@ -81,8 +81,20 @@ def find_browser_path():
     return None
 
 
+def _versioned_path(filename, reserved_paths, suffix, numbered_suffix):
+    if filename is None:
+        return None
+    candidate = filename + suffix
+    number = 2
+    while path.normcase(path.realpath(candidate)) in reserved_paths or path.isdir(candidate):
+        candidate = filename + numbered_suffix.format(number)
+        number += 1
+    reserved_paths.add(path.normcase(path.realpath(candidate)))
+    return candidate
+
+
 def load_config():
-    global conf, db, state, state_path
+    global conf, db, state, state_path, browser_state_path
     if path.isfile(config_path):
         conf = tomli.load(open(config_path, "rb"))
     for k, v in DEFAULT_CONFIG.items():
@@ -92,8 +104,16 @@ def load_config():
         if not path.isdir(path.expanduser(d)):
             makedirs(path.expanduser(d))
     state_path = path.expanduser(conf['state_path'])
+    browser_path = path.expanduser(conf['browser_cookies']) if conf['browser_cookies'] else None
+    reserved_paths = {
+        path.normcase(path.realpath(filename)) for filename in (state_path, browser_path) if filename
+    }
+    browser_state_path = _versioned_path(browser_path, reserved_paths, '_v2', '_v2_{}')
+    if browser_path:
+        conf['browser_cookies'] = browser_path
+    state = {}
     if path.isfile(state_path) and path.getsize(state_path) > 0:
-        with open(state_path, 'r') as f:
+        with open(state_path, encoding='utf-8') as f:
             state = json.load(f)
             if 'user_agent' in state:
                 conf['user_agent'] = state['user_agent']
@@ -101,15 +121,10 @@ def load_config():
     if not 'user_agent' in conf:
         conf['user_agent'] = def_user_agent
 
-    if conf['browser_cookies']:
-        conf['browser_cookies'] = path.expanduser(conf['browser_cookies'])
-
     if conf['browser']:
         conf['browser'] = path.expanduser(conf['browser'])
     else:
         conf['browser'] = find_browser_path()
-        if not conf['browser']:
-            raise Exception("Failed to detect browser environment. Define the browser within the configuration file.")
 
 #    if conf['browser_dir']:
 #        conf['browser_dir'] = path.expanduser(conf['browser_dir'])

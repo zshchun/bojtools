@@ -109,7 +109,11 @@ def test_solved_headers_requires_login_cookie(solved_module, monkeypatch):
         solved_module.solved_headers()
 
     monkeypatch.setattr(solved_module.config, "state", {"cookies": [{"name": "solvedacToken"}]})
-    assert solved_module.solved_headers() == solved_module._http.json_headers
+    original = dict(solved_module._http.json_headers)
+    assert solved_module.solved_headers() == {
+        **original, "Referer": "https://solved.ac/ko/problems",
+    }
+    assert solved_module._http.json_headers == original
 
 
 def test_unsolved_filter_prefers_config_and_falls_back_to_state(solved_module, monkeypatch):
@@ -141,7 +145,43 @@ def test_async_get_solved_reports_service_errors(
     with pytest.raises(RuntimeError, match=message):
         asyncio.run(solved_module.async_get_solved(url, params))
 
-    request_mocks.async_get.assert_awaited_once_with(url, params, solved_module._http.json_headers)
+    request_mocks.async_get.assert_awaited_once_with(url, params, solved_module.solved_headers())
+
+
+def test_async_get_solved_uses_http_without_starting_browser(solved_module, request_mocks, monkeypatch):
+    from bojtools import _browser
+
+    launch = AsyncMock(side_effect=AssertionError("Browser must not start"))
+    monkeypatch.setattr(_browser, 'async_playwright', launch)
+    monkeypatch.setattr(solved_module.config, 'state', {'cookies': [{'name': 'solvedacToken'}]})
+    params = {'q': '(*11..15) (-@sample)', 'page': 1, 'sort': 'random'}
+    request_mocks.async_get.return_value = '{"problems": [], "total": 0}'
+
+    result = asyncio.run(solved_module.async_get_solved(solved_module.SOLVED_V4_PROBS, params))
+
+    assert result == {'problems': [], 'total': 0}
+    request_mocks.async_get.assert_awaited_once_with(
+        solved_module.SOLVED_V4_PROBS, params,
+        {**solved_module._http.json_headers, 'Referer': 'https://solved.ac/ko/problems'},
+    )
+    launch.assert_not_called()
+
+
+@pytest.mark.parametrize('message', ['Browser verification required', 'Network failure'])
+def test_async_query_solvedac_closes_http_on_failure(solved_module, request_mocks, monkeypatch, message):
+    monkeypatch.setattr(solved_module.config, 'state', {'cookies': [{'name': 'solvedacToken'}]})
+    request_mocks.async_get.side_effect = RuntimeError(message)
+
+    with pytest.raises(RuntimeError, match=message):
+        asyncio.run(solved_module.async_query_solvedac(solved_module.SOLVED_V4_PROBS, {}))
+
+    request_mocks.close_session.assert_awaited_once()
+
+
+def test_async_get_solved_rejects_foreign_origin(solved_module, request_mocks):
+    with pytest.raises(ValueError, match='solved.ac origin'):
+        asyncio.run(solved_module.async_get_solved('https://solved.ac.example.test/api/v4/problems', {}))
+    request_mocks.async_get.assert_not_awaited()
 
 
 def test_pick_random_builds_query_for_reversed_bounds(solved_module, monkeypatch):
