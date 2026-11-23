@@ -74,6 +74,7 @@ code
 ## `boj pick`
 - Picks a problem.
 - If no number is given, shows information for the current directory.
+- TeX math (`\(...\)` and `\[...\]`) in problem statements is converted to text for terminal display. Unsupported formulas are displayed as written.
 - `-f`: force-refresh problem status (AC/WA)
 
 Examples:

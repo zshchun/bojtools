@@ -1,9 +1,72 @@
+import re
 import subprocess
 import unicodedata
 from . import config
 from lxml import etree, html
 from os import path, getcwd, getpid, sep, makedirs, listdir, kill
+from pylatexenc.latex2text import LatexNodes2Text
+from pylatexenc.latexwalker import LatexWalker, LatexWalkerParseError
 import signal
+
+
+_MATH_SPAN = re.compile(
+    r"\\\\|\\\((?:[^\\]|\\[^()[\]])*\\\)|\\\[(?:[^\\]|\\[^()[\]])*\\\]"
+)
+
+
+class _UnsupportedTex(ValueError):
+    pass
+
+
+class _ProblemMathText(LatexNodes2Text):
+    def nodelist_to_text(self, nodelist):
+        if len(nodelist) == 1 and getattr(nodelist[0], "macroname", None) == "frac":
+            return self._fraction_to_text(nodelist[0])
+        return super().nodelist_to_text(nodelist)
+
+    def _fraction_to_text(self, node):
+        if not node.nodeargd or len(node.nodeargd.argnlist) != 2:
+            raise _UnsupportedTex
+        numerator = self.node_arg_to_text(node, 0).strip()
+        denominator = self.node_arg_to_text(node, 1).strip()
+        if not numerator or not denominator:
+            raise _UnsupportedTex
+        numerator = numerator if numerator.isalnum() else f"({numerator})"
+        denominator = denominator if denominator.isalnum() else f"({denominator})"
+        return f"{numerator}/{denominator}"
+
+    def macro_node_to_text(self, node):
+        if node.macroname == "frac":
+            return f"({self._fraction_to_text(node)})"
+        if node.macroname == "sqrt" and (
+            not node.nodeargd or not node.nodeargd.argnlist or node.nodeargd.argnlist[0] is not None
+        ):
+            raise _UnsupportedTex
+        if self.latex_context.get_macro_spec(node.macroname) is None:
+            raise _UnsupportedTex
+        return super().macro_node_to_text(node)
+
+    def environment_node_to_text(self, node):
+        if self.latex_context.get_environment_spec(node.environmentname) is None:
+            raise _UnsupportedTex
+        return super().environment_node_to_text(node)
+
+
+_MATH_TEXT = _ProblemMathText(math_mode="text", keep_braced_groups=True)
+
+
+def render_problem_math(text):
+    def render_span(match):
+        source = match.group()
+        if source == r"\\":
+            return source
+        try:
+            nodes, _, _ = LatexWalker(source, tolerant_parsing=False).get_latex_nodes()
+            return _MATH_TEXT.nodelist_to_text(nodes) or source
+        except (LatexWalkerParseError, _UnsupportedTex, RecursionError):
+            return source
+
+    return _MATH_SPAN.sub(render_span, text)
 
 
 def sig_handler(signum, frame):
@@ -28,7 +91,7 @@ def wrap_html_text(s):
     if not s:
         return ""
     text = html.fromstring(s).text_content().replace('\n\t', '\n ')
-    text = text_wrap(text, config.conf['text_width'])
+    text = text_wrap(render_problem_math(text), config.conf['text_width'])
     return text
 
 def guess_pid(args):

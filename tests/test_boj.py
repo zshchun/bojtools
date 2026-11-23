@@ -137,19 +137,31 @@ def test_generate_code_uses_configured_language_template(boj_module, tmp_path, e
 
 
 def test_async_pick_uses_cache_and_writes_samples(boj_module, cached_problem, request_mocks, capsys):
+    raw_math = r"\(\frac{1}{138}\)"
+    problem = dict(
+        cached_problem, desc=f"Fraction {raw_math}", samples=[{"in": f"{raw_math}\n", "out": "3\n"}],
+    )
+    boj_module.save_problem_cache(problem)
+
     asyncio.run(boj_module.async_pick(1000))
 
     request_mocks.open_session.assert_not_awaited()
     request_mocks.async_get.assert_not_awaited()
-    assert "Addition" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "Addition" in output
+    assert "Fraction 1/138" in output
+    assert raw_math in output
+    assert boj_module.get_cached_problem(1000) == problem
     directory = Path(boj_module.config.conf["code_dir"]) / "1000"
-    assert (directory / "in1.txt").read_text(encoding="utf-8") == "1 2\n"
+    assert (directory / "in1.txt").read_text(encoding="utf-8") == f"{raw_math}\n"
     assert (directory / "ans1.txt").read_text(encoding="utf-8") == "3\n"
 
 
 def test_async_pick_refreshes_cache_and_archives_html(
     boj_module, cached_problem, problem_page, request_mocks,
 ):
+    raw_math = r"\(\frac{1}{138}\)"
+    problem_page = problem_page.replace("integers.</div>", f"integers. {raw_math}</div>", 1)
     request_mocks.async_get.return_value = problem_page
 
     asyncio.run(boj_module.async_pick(1000, force=True, silent=True, save_raw=True))
@@ -159,7 +171,7 @@ def test_async_pick_refreshes_cache_and_archives_html(
     request_mocks.close_session.assert_awaited_once_with()
     problem = boj_module.get_cached_problem(1000)
     assert problem["solved"] == boj_module.STATUS_AC
-    assert problem["desc"] == "Add two integers."
+    assert problem["desc"] == f"Add two integers. {raw_math}"
     assert problem["info"] == cached_problem["info"]
     assert problem["spoiler"] == "Arithmetic"
     assert problem["samples"] == [{"in": "1 2", "out": "3"}, {"in": "3 4", "out": "7"}]
@@ -183,7 +195,7 @@ def test_show_problem_displays_translated_text_and_samples(boj_module, cached_pr
     translations = [{
         "problem_lang_tcode": "en",
         "title": "Translated title",
-        "description": "<p>Translated description</p>",
+        "description": r"<p>Translated description \(\frac{1}{138}\)</p>",
         "input": "<p>Translated input</p>",
         "output": "<p>Translated output</p>",
         "hint": "<p>Translated hint</p>",
@@ -194,7 +206,7 @@ def test_show_problem_displays_translated_text_and_samples(boj_module, cached_pr
     boj_module.show_problem(problem)
 
     output = capsys.readouterr().out
-    for text in ("Translated title", "Translated description", "Translated input",
+    for text in ("Translated title", "Translated description 1/138", "Translated input",
                  "Translated output", "Translated hint", "Samples:", "1 2"):
         assert text in output
 

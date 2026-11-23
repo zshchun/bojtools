@@ -153,20 +153,20 @@ def show_problem(prob):
                 hint_text = wrap_html_text(lang['hint'])
                 print(''.join(hint_text))
     else:
-        print(text_wrap(prob['desc'], text_width))
+        print(text_wrap(render_problem_math(prob['desc']), text_width))
         print(GREEN("\nInput:"))
         if prob['input']:
-            print(text_wrap(prob['input'], text_width))
+            print(text_wrap(render_problem_math(prob['input']), text_width))
         print(GREEN("\nOutput:"))
         if prob['output']:
-            print(text_wrap(prob['output'], text_width))
+            print(text_wrap(render_problem_math(prob['output']), text_width))
         if prob['hint']:
             print(GREEN("\nHint:"))
-            print(text_wrap(prob['hint'], text_width))
+            print(text_wrap(render_problem_math(prob['hint']), text_width))
 
     if prob['constraints']:
         print(GREEN("\nContraints:"))
-        print(prob['constraints'])
+        print(render_problem_math(prob['constraints']))
     print(BWHITE("\nSamples:"))
     idx = 1
     for tc in prob['samples']:

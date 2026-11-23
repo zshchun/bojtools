@@ -19,6 +19,27 @@ def test_get_tag_text_and_wrap_html(boj_config):
     assert util.wrap_html_text("") == ""
 
 
+@pytest.mark.parametrize(
+    ("source", "rendered"),
+    [
+        (r"분수 \(\frac{1}{138}\)이다.", "분수 1/138이다."),
+        (r"\(\frac{a+b}{\frac{x}{y}}\)", "(a+b)/(x/y)"),
+        (r"\(\frac{1}{2}^2\)", "(1/2)^2"),
+        (r"\(x \le 10^{n+1}\)", "x ≤ 10^{n+1}"),
+        (r"\[\sqrt{x+1}\]", "\n    √(x+1)\n"),
+        (r"\(\frac{1}\) \(\alpha\)", r"\(\frac{1}\) α"),
+        (r"\(\frac{1}{\unknown{x}}\)", r"\(\frac{1}{\unknown{x}}\)"),
+        (r"\(\frac\sqrt{x}\)", r"\(\frac\sqrt{x}\)"),
+        (r"\(\sqrt[3]{x}\)", r"\(\sqrt[3]{x}\)"),
+        (r"\frac{1}{138}\) \\(\alpha\\)", r"\frac{1}{138}\) \\(\alpha\\)"),
+    ],
+)
+def test_render_problem_math(boj_config, source, rendered):
+    from bojtools.util import render_problem_math
+
+    assert render_problem_math(source) == rendered
+
+
 def test_guess_pid_prefers_argument_and_falls_back_to_numeric_directory(boj_config, monkeypatch, tmp_path):
     from bojtools import util
 
