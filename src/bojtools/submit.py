@@ -56,6 +56,7 @@ async def async_playwright_submit(url, filename, pid, language_id=None):
             await page.goto(url, wait_until='domcontentloaded')
             button = page.locator('#submit_button')
             await button.wait_for(state='visible', timeout=300_000)
+            await page.wait_for_load_state('load')
             destination = urlsplit(page.url)
             if (destination.scheme != 'https'
                     or destination.hostname not in ('acmicpc.net', 'www.acmicpc.net')
@@ -67,11 +68,20 @@ async def async_playwright_submit(url, filename, pid, language_id=None):
             if language_id is not None:
                 language = page.locator('select[name="language"], select[name="language_id"], select#language')
                 try:
-                    await language.select_option(value=str(language_id), timeout=10_000)
-                except PlaywrightError:
-                    print(f'[!] BOJ does not offer language ID {language_id} on this submission page.')
+                    # Chosen hides the native select that supplies the submitted value.
+                    await language.select_option(value=str(language_id), force=True, timeout=10_000)
+                except PlaywrightTimeoutError:
+                    print(f'[!] Could not select BOJ language ID {language_id}. Check the language list on the page.')
                     await page.wait_for_event('close', timeout=0)
                     return
+                await language.evaluate(
+                    """element => {
+                        if (element.classList.contains('chosen-select')) {
+                            window.jQuery?.(element).trigger('chosen:updated');
+                        }
+                    }""",
+                    isolated_context=False,
+                )
 
             # CodeMirror's editor API updates the document used by the normal form submit.
             editor = page.locator('div.CodeMirror')

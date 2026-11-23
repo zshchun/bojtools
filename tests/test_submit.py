@@ -198,7 +198,7 @@ def browser_submission(submit_module, monkeypatch, tmp_path):
     source = tmp_path / "main.py"
     source.write_text("def example():\n\tpass\n")
     button = SimpleNamespace(wait_for=AsyncMock(), click=AsyncMock())
-    language = SimpleNamespace(select_option=AsyncMock())
+    language = SimpleNamespace(select_option=AsyncMock(), evaluate=AsyncMock())
     editor = SimpleNamespace(wait_for=AsyncMock(), evaluate=AsyncMock())
     result = SimpleNamespace(wait_for=AsyncMock())
     locators = {
@@ -209,6 +209,7 @@ def browser_submission(submit_module, monkeypatch, tmp_path):
     }
     page = SimpleNamespace(
         goto=AsyncMock(),
+        wait_for_load_state=AsyncMock(),
         locator=Mock(side_effect=locators.__getitem__),
         content=AsyncMock(return_value="<html></html>"),
         wait_for_event=AsyncMock(),
@@ -243,18 +244,33 @@ def test_browser_selects_configured_runtime_before_submit(submit_module, browser
     flow = browser_submission
     flow.wait_for_result.return_value = True
 
+    async def wait_for_load(*args):
+        flow.button.wait_for.assert_awaited_once()
+        flow.language.select_option.assert_not_awaited()
+        flow.editor.evaluate.assert_not_awaited()
+        flow.button.click.assert_not_awaited()
+
     async def select_option(**kwargs):
+        flow.page.wait_for_load_state.assert_awaited_once_with("load")
+        flow.editor.evaluate.assert_not_awaited()
         flow.button.click.assert_not_awaited()
         if not available:
             raise PlaywrightTimeoutError("No such option")
 
+    flow.page.wait_for_load_state.side_effect = wait_for_load
     flow.language.select_option.side_effect = select_option
     asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000, 113))
 
-    flow.language.select_option.assert_awaited_once_with(value="113", timeout=10_000)
+    flow.language.select_option.assert_awaited_once_with(value="113", force=True, timeout=10_000)
     if available:
+        flow.language.evaluate.assert_awaited_once()
+        assert "chosen:updated" in flow.language.evaluate.await_args.args[0]
+        assert flow.language.evaluate.await_args.kwargs == {"isolated_context": False}
+        flow.editor.evaluate.assert_awaited_once()
         flow.button.click.assert_awaited_once()
     else:
+        flow.language.evaluate.assert_not_awaited()
+        flow.editor.evaluate.assert_not_awaited()
         flow.button.click.assert_not_awaited()
         flow.page.wait_for_event.assert_awaited_once_with("close", timeout=0)
 
@@ -313,12 +329,15 @@ def test_browser_submission_retains_tab_for_inspection_only_when_needed(
         assert "Could not receive the BOJ judging result" in stdout
 
 
-def test_submission_timeout_leaves_browser_available(submit_module, browser_submission, capsys):
+@pytest.mark.parametrize("during_load", [False, True])
+def test_submission_timeout_leaves_browser_available(submit_module, browser_submission, capsys, during_load):
     flow = browser_submission
-    flow.button.wait_for.side_effect = PlaywrightTimeoutError("form readiness timed out")
+    wait = flow.page.wait_for_load_state if during_load else flow.button.wait_for
+    wait.side_effect = PlaywrightTimeoutError("form readiness timed out")
 
     asyncio.run(submit_module.async_playwright_submit(flow.url, flow.source, 1000))
 
+    flow.editor.evaluate.assert_not_awaited()
     flow.button.click.assert_not_awaited()
     flow.wait_for_result.assert_not_awaited()
     flow.close_session.assert_not_awaited()
