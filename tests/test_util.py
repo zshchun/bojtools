@@ -19,6 +19,18 @@ def test_get_tag_text_and_wrap_html(boj_config):
     assert util.wrap_html_text("") == ""
 
 
+def test_problem_html_preserves_superscripts(boj_config):
+    from bojtools import util
+
+    source = "<p>−10<sup><b>9</b></sup> ≤ 10<sup>−12</sup>, x<sup>n+1</sup>.</p>"
+    expected = "−10⁹ ≤ 10⁻¹², x^{n+1}."
+    tag = html.fromstring(source)
+
+    assert util.get_tag_text([tag]) == expected
+    assert util.wrap_html_text(source) == expected
+    assert html.tostring(tag, encoding="unicode") == source
+
+
 @pytest.mark.parametrize(
     ("source", "rendered"),
     [

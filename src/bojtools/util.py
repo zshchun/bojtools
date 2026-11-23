@@ -1,6 +1,7 @@
 import re
 import subprocess
 import unicodedata
+from copy import deepcopy
 from . import config
 from lxml import etree, html
 from os import path, getcwd, getpid, sep, makedirs, listdir, kill
@@ -12,6 +13,7 @@ import signal
 _MATH_SPAN = re.compile(
     r"\\\\|\\\((?:[^\\]|\\[^()[\]])*\\\)|\\\[(?:[^\\]|\\[^()[\]])*\\\]"
 )
+_SUPERSCRIPT = str.maketrans("0123456789+−-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁻")
 
 
 class _UnsupportedTex(ValueError):
@@ -81,16 +83,31 @@ def register_signal():
     signal.signal(signal.SIGTERM, sig_handler)
 
 
+def _problem_html_text(element):
+    if next(element.iter("sup"), None) is not None:
+        element = deepcopy(element)
+        for sup in reversed(list(element.iter("sup"))):
+            exponent = sup.text_content().strip()
+            if not exponent:
+                continue
+            if re.fullmatch(r"[+−-]?[0-9]+", exponent):
+                sup.text = exponent.translate(_SUPERSCRIPT)
+            else:
+                sup.text = f"^{{{exponent}}}"
+            del sup[:]
+    return element.text_content().replace('\n\t', '\n ')
+
+
 def get_tag_text(tags):
     ret = ''
     for t in tags:
-        ret += t.text_content().replace('\n\t', '\n ')
+        ret += _problem_html_text(t)
     return ret.strip()
 
 def wrap_html_text(s):
     if not s:
         return ""
-    text = html.fromstring(s).text_content().replace('\n\t', '\n ')
+    text = _problem_html_text(html.fromstring(s))
     text = text_wrap(render_problem_math(text), config.conf['text_width'])
     return text
 

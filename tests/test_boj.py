@@ -54,7 +54,7 @@ def problem_page(cached_problem):
       <span class="problem-label problem-label-ac"></span>
       <table id="problem-info"><tr>{headings}</tr><tr>{values}</tr></table>
       <div id="problem_description">Add <b>two</b> integers.</div>
-      <div id="problem_input">Two integers</div>
+      <div id="problem_input">Two integers up to 10<sup>9</sup></div>
       <div id="problem_output">Their sum</div>
       <div id="problem_limit">-10 to 10</div>
       <div id="problem_hint">Use addition</div>
@@ -172,6 +172,7 @@ def test_async_pick_refreshes_cache_and_archives_html(
     problem = boj_module.get_cached_problem(1000)
     assert problem["solved"] == boj_module.STATUS_AC
     assert problem["desc"] == f"Add two integers. {raw_math}"
+    assert problem["input"] == "Two integers up to 10⁹"
     assert problem["info"] == cached_problem["info"]
     assert problem["spoiler"] == "Arithmetic"
     assert problem["samples"] == [{"in": "1 2", "out": "3"}, {"in": "3 4", "out": "7"}]
