@@ -11,7 +11,10 @@ import signal
 
 
 _MATH_SPAN = re.compile(
-    r"\\\\|\\\((?:[^\\]|\\[^()[\]])*\\\)|\\\[(?:[^\\]|\\[^()[\]])*\\\]"
+    r"\\\\|\\\$"
+    r"|\\\((?:[^\\]|\\[^()[\]])*\\\)|\\\[(?:[^\\]|\\[^()[\]])*\\\]"
+    r"|(?<!\$)\$\$(?:[^\\$]|\\.)*\$\$(?!\$)"
+    r"|(?<!\$)\$(?:[^\\$]|\\.)+\$(?!\$)"
 )
 _SUPERSCRIPT = str.maketrans("0123456789+−-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁻")
 
@@ -60,7 +63,7 @@ _MATH_TEXT = _ProblemMathText(math_mode="text", keep_braced_groups=True)
 def render_problem_math(text):
     def render_span(match):
         source = match.group()
-        if source == r"\\":
+        if source in (r"\\", r"\$"):
             return source
         try:
             nodes, _, _ = LatexWalker(source, tolerant_parsing=False).get_latex_nodes()
